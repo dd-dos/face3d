@@ -94,7 +94,6 @@ model.tri_mouth = tm_inner;
 % save
 clearvars -except model model_info UV
 
-save 'Out/BFM.mat' model
-save 'Out/BFM_info.mat' model_info
-save 'Out/BFM_UV.mat' UV
-copyfile('3ddfa/pncc_code.mat', 'Out/pncc_code.mat')
+save -mat7-binary 'Out/BFM.mat' model
+save -mat7-binary 'Out/BFM_info.mat' model_info
+save -mat7-binary 'Out/BFM_UV.mat' UV
