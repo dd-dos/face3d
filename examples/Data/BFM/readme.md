@@ -30,15 +30,18 @@
 
     
 
-4. run generate.m in Matlab  
-
+4. Run generate.m in Matlab.  
+**Editor note**: If Matlab is not available:
+- Install octave `sudo apt-get install octave`.
+- Open octave cli: `octave-cli`.
+- Simply run `generate`. The process will be the same as Matlab.
 
 
 Files will be saved in Out/  
 
-Note: 
+**Note**: 
 
-you need mkdir folders yourself, since I can not  upload empty folder to github.
+You need mkdir folders yourself.
 
 
 

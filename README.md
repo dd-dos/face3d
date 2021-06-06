@@ -108,8 +108,6 @@ morphable_model/
   * matplotlib (for show)
   * Cython (for compiling c++ file)
 
-- Octave: run `sudo apt-get install octave`
-
 ### Usage
 
 1. Clone the repository
