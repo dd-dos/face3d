@@ -32,5 +32,7 @@ if __name__=='__main__':
         cv2.imwrite(img_out_path, img)
         np.save(params_out_path, params)
 
-    with mp.Pool(mp.cpu_count()) as p:
-        r = list(tqdm.tqdm(p.imap(task, bag), total=len(bag)))
+    # with mp.Pool(mp.cpu_count()-2) as p:
+    #     r = list(tqdm.tqdm(p.imap(task, bag), total=len(bag)))
+    for item in tqdm.tqdm(bag):
+        task(item)
