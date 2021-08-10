@@ -1,10 +1,18 @@
+import multiprocessing as mp
+import os
+import random
+from pathlib import Path
+
 import cv2
 import matplotlib.pyplot as plt
 import numba
 import numpy as np
-from PIL import Image, ImageFilter, ImageOps
 import PIL
-import random
+import scipy.io as sio
+import torchfile
+import tqdm
+from PIL import Image, ImageFilter, ImageOps
+
 
 def show_ndarray_img(img):
     if np.mean(img) <= 1:
@@ -416,14 +424,94 @@ def toNumpy_RGBA(image, alpha_value=255):
         image = cv2.cvtColor(image, cv2.COLOR_GRAY2RGBA)
         return image
 
-if __name__ == '__main__':
-    path_img = 'black_background_face_path'         
-    image = Image.open(path_img)
-    image = create_transparent_image(image, threshold=50, mode='lower')
-    path_bg = 'path_back_ground'
-    background = Image.open(path_bg)
-    coord_paste = (x, y)
-    blend_image = blend_smooth_image(image, background, xy=(x, y), smooth_mode=True, iterations=5)
+def isgray(img):
+    if len(img.shape) < 3: return True
+    if img.shape[2]  == 1: return True
+    b,g,r = img[:,:,0], img[:,:,1], img[:,:,2]
+    if (b==g).all() and (b==r).all(): return True
+    return False
+
+
+def dis(pt1, pt2):
+    return np.linalg.norm(pt1-pt2)
+
+
+def check_frontal_face(pts, threshold=3):
+    if np.abs(dis(pts[0], pts[27]) - dis(pts[27], pts[16])) <= threshold and \
+        dis(pts[0], pts[16]) > dis(pts[0], pts[27]) and \
+        dis(pts[0], pts[16]) > dis(pts[27], pts[16]):
+        if pts[0][1] < pts[8][1] and pts[16][1] < pts[8][1]:
+            return True
+        else:
+            return False
+    else:
+        return False 
+
+
+def task(img_path):
+    img_path = str(img_path)
+    img = cv2.imread(img_path)
+    if isgray(img):
+        return
+
+    try:
+        pts_path = img_path.replace('jpg', 't7')
+        if not os.path.isfile(pts_path):
+            pts_path = img_path.replace('jpg', 'mat')
+            pts = sio.loadmat(pts_path)['pt3d_68'][:2].T
+        else:
+            pts = torchfile.load(pts_path)
+    except Exception as e:
+        print(e)
+        return
+
+    if check_frontal_face(pts):
+        for pt in pts:
+            pt = tuple(pt.astype(np.uint16))
+            cv2.circle(img, pt, 2, (0,255,0), -1, 10)
+
+        token = img_path.split('/')
+        folder_id = token[-2]
+        file_id = token[-1]
+
+        os.makedirs(f'frontal_faces/{PARENT}/{folder_id}', exist_ok=True)
+        out_path = f'frontal_faces/{PARENT}/{folder_id}/{file_id}'
+        cv2.imwrite(out_path, img)
+        
+
+
+if __name__=='__main__':
+    global PARENT
+    os.makedirs(f'frontal_faces/', exist_ok=True)
+
+    # print('Process AFLW2000')
+    # img_list = list(Path('AFLW2000').glob('**/*.jpg'))
+    # PARENT = 'AFLW2000'
+    # os.makedirs(f'frontal_faces/{PARENT}', exist_ok=True)
+    # with mp.Pool(6) as p:
+    #     r = list(tqdm.tqdm(p.imap(task, img_list), total=len(img_list)))
+
+    # print('Process AFLW2000-3D-Reannotated')
+    # img_list = list(Path('AFLW2000-3D-Reannotated').glob('**/*.jpg'))
+    # PARENT = 'AFLW2000-3D-Reannotated'
+    # os.makedirs(f'frontal_faces/{PARENT}', exist_ok=True)
+    # with mp.Pool(6) as p:
+    #     r = list(tqdm.tqdm(p.imap(task, img_list), total=len(img_list)))
+
+    print('Process 300VW-3D')
+    img_list = list(Path('300VW-3D').glob('**/*.jpg'))
+    PARENT = '300VW-3D'
+    os.makedirs(f'frontal_faces/{PARENT}', exist_ok=True)
+    with mp.Pool(6) as p:
+        r = list(tqdm.tqdm(p.imap(task, img_list), total=len(img_list)))
+
+    # path_img = 'black_background_face_path'         
+    # image = Image.open(path_img)
+    # image = create_transparent_image(image, threshold=50, mode='lower')
+    # path_bg = 'path_back_ground'
+    # background = Image.open(path_bg)
+    # coord_paste = (x, y)
+    # blend_image = blend_smooth_image(image, background, xy=(x, y), smooth_mode=True, iterations=5)
     
     
   

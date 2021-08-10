@@ -13,8 +13,9 @@ import tqdm
 from PIL import Image
 
 from face3d import mesh
+from face3d import utils
 from face3d.morphable_model import MorphabelModel
-from face3d.utils import (crop_face_landmarks, resize_face_landmarks,
+from face3d.utils import (crop_face_landmarks, isgray, resize_face_landmarks,
                           show_ndarray_img, show_pts, show_vertices)
 
 bfm = MorphabelModel('/home/pdd/Desktop/Workspace/3DDFA-1/face3d/examples/Data/BFM/Out/BFM.mat')
@@ -85,11 +86,12 @@ if __name__=='__main__':
     )
     # img = cv2.imread('examples/Data/300WLP-std_134212_1_0.jpg')
     # pt = sio.loadmat('examples/Data/300WLP-std_134212_1_0.mat')['pt3d']
-    # img = cv2.imread('examples/Data/image00050.jpg')
-    # pt = sio.loadmat('examples/Data/image00050.mat')['pt3d_68'][:2].T
+    img = cv2.imread('AFLW2000/image01649.jpg')
+    pt = sio.loadmat('AFLW2000/image01649.mat')['pt3d_68'][:2].T
+    # show_pts(img, np.array([pt[16]]))
+    print(utils.check_frontal_face(pt))
     # img, params = model.generate_rotated_3d_img(img, pt)
-
-    img = cv2.imread('300WLP_processed/300WLP_processed-verified/300WLP_processed-std_4970182488_1_6.jpg')
-    params = np.load('300WLP_processed/300WLP_processed-verified/300WLP_processed-std_4970182488_1_6.npy')
-    pt = model.reconstruct_vertex(img, params)
-    show_pts(img, pt[model.bfm.kpt_ind])
+    # img = cv2.imread('300WLP_processed/300WLP_processed-verified/300WLP_processed-std_4970182488_1_6.jpg')
+    # params = np.load('300WLP_processed/300WLP_processed-verified/300WLP_processed-std_4970182488_1_6.npy')
+    # pt = model.reconstruct_vertex(img, params)
+    # show_pts(img, pt[model.bfm.kpt_ind])

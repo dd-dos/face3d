@@ -243,16 +243,19 @@ class FaceModel:
         r_pt = self.reconstruct_vertex(r_img, params)
         utils.show_pts(r_img, r_pt[self.bfm.kpt_ind])
     
-    def generate_rotated_3d_img(self, img, pt):
+    def generate_rotated_3d_img(self, img, pt, angles=None, blended=False):
         img, pt = self._preprocess_face_landmarks(img, pt, shape=(256,256))
-        r_img, params = self.augment_rotate(img, pt)
+        r_img, params = self.augment_rotate(img, pt, angles=angles)
 
-        blended_img = utils.blend_smooth_image(
-            r_img,
-            random.choice(BACKGROUND),
-        )
+        if blended:
+            blended_img = utils.blend_smooth_image(
+                r_img,
+                random.choice(BACKGROUND)
+            )
 
-        return blended_img, params
+            return blended_img, params
+        else:
+            return r_img, params
 
     def generate_3ddfa_params(self, img, pt):
         img, pt = self._preprocess_face_landmarks(img, pt, shape=(256,256))

@@ -5,5 +5,6 @@ face3d/mesh/cython/mesh_core_cython.cpython-37m-x86_64-linux-gnu.so
 face3d/mesh/cython/build
 face3d/face_detector/weights
 face3d/tddfa
-300VW-3D_cropped
+300VW*
 300WLP*
+AFLW2000*
