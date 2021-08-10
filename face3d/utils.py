@@ -1,9 +1,10 @@
-import numpy as np
-import matplotlib.pyplot as plt
-
 import cv2
-from PIL import Image
+import matplotlib.pyplot as plt
 import numba
+import numpy as np
+from PIL import Image, ImageFilter, ImageOps
+import PIL
+import random
 
 def show_ndarray_img(img):
     if np.mean(img) <= 1:
@@ -131,3 +132,299 @@ def resize_face_landmarks(img, landmarks, shape=(256,256)):
     landmarks.T[1] = landmarks.T[1]*height_ratio
 
     return img, landmarks 
+
+
+def isNumpy(image):
+    if isinstance(image, np.ndarray):
+        return True
+    else:
+        return False
+
+def isPIL(image):
+    if isinstance(image, PIL.Image.Image):
+        return True
+    else: 
+        return False
+
+def toNumpy(image):
+    if isNumpy(image):
+        return image
+    elif isPIL(image):
+        image = np.array(image)
+        return image
+    else:
+        raise TypeError("Only support for np.ndarray or PIL.Image.Image. Got type: {​}​".format(type(image)))
+
+
+def toPIL(image):
+    if isNumpy(image):
+        image = Image.fromarray(image)
+        return image
+    elif isPIL(image):
+        return image
+    else:
+        raise TypeError("Only support for np.ndarray or PIL.Image.Image. Got type: {​}​".format(type(image)))
+
+
+def get_avg_brightness(image):
+    ''' Get average of value of brightness of image
+    Params
+    ------
+    :image: np.ndarray or PIL image
+    Returns
+    -------
+    Average brightness of image
+    '''
+    image = toNumpy(image)
+    img_hsv = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
+    h, s, v = cv2.split(img_hsv)
+    return np.mean(v)
+
+
+def get_avg_saturation(image):
+    ''' Get average of value of saturation of image
+    Params
+    ------
+    :image: np.ndarray or PIL image
+    Returns
+    -------
+    Average saturation of image
+    '''
+    image = toNumpy(image)
+    img_hsv = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
+    h, s, v = cv2.split(img_hsv)
+    return np.mean(s)
+
+
+def change_brightness(image, value=1.0):
+    is_numpy = isNumpy(image)
+    image = toNumpy(image)
+    img_hsv = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
+    h, s, v = cv2.split(img_hsv)
+    v = value * v
+    v[v > 255] = 255
+    v = np.asarray(v, dtype=np.uint8)
+    final_hsv = cv2.merge((h, s, v))
+    image = cv2.cvtColor(final_hsv, cv2.COLOR_HSV2BGR)
+    image = toNumpy(image) if is_numpy else toPIL(image)
+    return image
+
+
+def change_saturation(image, value):
+    is_numpy = isNumpy(image)
+    image = toNumpy(image)
+    img_hsv = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
+    h, s, v = cv2.split(img_hsv)
+    s = value * s
+    s[s > 255] = 255
+    s = np.asarray(s, dtype=np.uint8)
+    final_hsv = cv2.merge((h, s, v))
+    image = cv2.cvtColor(final_hsv, cv2.COLOR_HSV2BGR)
+    image = toNumpy(image) if is_numpy else toPIL(image)
+    return image
+
+
+def matching_brightness(src_image, dst_image):
+    ''' Matching brightness of src_image to brightness of dst_image
+    Params
+    ------
+    src_image: np.ndarray or PIL image
+    dst_image: np.ndarray or PIL image
+    Returns
+    -------
+    result image
+    '''    
+    is_numpy = isNumpy(src_image)
+    raw_src = toNumpy(src_image)
+    raw_dst = toNumpy(dst_image)
+    rgba = False
+    if raw_src.shape[-1] == 4:
+        alpha_channel = raw_src[:,:,3].copy()
+        raw_src = raw_src[:,:, :3]
+        rgba = True
+    raw_image = raw_src[:, :, :3].copy()
+    src_brightness = get_avg_brightness(raw_src)
+    dst_brightness = get_avg_brightness(raw_dst)
+    delta_brightness = 1 + (dst_brightness - src_brightness)/255
+    src_saturation = get_avg_saturation(raw_src)
+    dst_saturation = get_avg_saturation(raw_dst)
+    delta_saturation = 1 + (dst_saturation - src_saturation)/255
+    raw_image = change_brightness(raw_image, delta_brightness)
+    raw_image = change_saturation(raw_image, delta_saturation)
+    if rgba:
+        alpha_channel = np.expand_dims(alpha_channel, axis=2)
+        raw_image = np.concatenate((raw_image, alpha_channel), axis=-1)
+    raw_image = toNumpy(raw_image) if is_numpy else toPIL(raw_image)
+    return raw_image
+
+
+def create_transparent_image(image, threshold, mode='equal', get_full_object=False):
+    ''' Create transparent image
+    Params
+    ------
+    :image: np.ndarray or PIL image
+    :threshold: threshold to transparent
+    :model: 
+        'equal' - all pixels have value equal to threshold will become transparent
+        'greater' - all pixels have value greater than threshold will become transparent
+        'lower' - all pixels have value lower than threshold will become transparent
+    :get_full_object: Keep 1 main object and all pixels in object
+    Returns
+    -------
+    transparent image
+    '''
+    is_numpy = isNumpy(image)
+    if isinstance(threshold, int):
+        threshold = (threshold,threshold, threshold)
+    elif not (isinstance(threshold, tuple) or isinstance(threshold,list)):
+        raise TypeError("Type of threshold must be int or list or tuple. Got{}".format(threshold))
+    image_rgba = toNumpy_RGBA(image)
+    image_rgb = image_rgba[:,:,:3].copy()
+    # Transparent mask
+    if mode == "equal":
+        # transparent_area = np.any(image_rgb == threshold, axis=-1)
+        mask_1 = image_rgb[:,:,0] == threshold[0]
+        mask_2 = image_rgb[:,:,1] == threshold[1]
+        mask_3 = image_rgb[:,:,2] == threshold[2]
+    elif mode == "greater":
+        # transparent_area = np.any(image_rgb >= threshold, axis=-1)
+        mask_1 = image_rgb[:,:,0] >= threshold[0]
+        mask_2 = image_rgb[:,:,1] >= threshold[1]
+        mask_3 = image_rgb[:,:,2] >= threshold[2]
+        
+    elif mode == "lower":
+        transparent_area = np.any(image_rgb <= threshold, axis=-1)
+        mask_1 = image_rgb[:,:,0] <= threshold[0]
+        mask_2 = image_rgb[:,:,1] <= threshold[1]
+        mask_3 = image_rgb[:,:,2] <= threshold[2]
+    else:
+        raise TypeError("Valid mode in ['equal', 'greater', 'lower']. Got {}".format(mode))
+    transparent_area = mask_1 * mask_2 * mask_3
+    if get_full_object:
+        # Get the main object and all pixels in that object
+        invert_mask = np.invert(transparent_area)
+        transparent_area_int = invert_mask.astype(np.uint8) * 255
+        mask_rgb = cv2.cvtColor(transparent_area_int, cv2.COLOR_GRAY2BGR)
+        _, bin_mask = cv2.threshold(transparent_area_int, 127, 255, 0)
+        cnts, _ = cv2.findContours(bin_mask, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
+        # Get biggest contour
+        large_cnt = max(cnts, key = cv2.contourArea)
+        transparent_area = np.zeros(transparent_area.shape)
+        cv2.fillPoly(transparent_area, pts=[large_cnt], color=(255,255,255))
+        transparent_area = np.invert(np.bool_(transparent_area))
+        
+    image_rgba[transparent_area, -1] = 0 
+    image_rgba = toNumpy(image_rgba) if is_numpy else toPIL(image_rgba)
+    return image_rgba
+     
+
+def blend_smooth_image(image, background, xy=(0,0), wh=None, iterations=None, smooth_mode=True, brightness_matching=True):
+    ''' Blend image to background with smoothly effect
+    Params
+    ------
+    :image: np.ndarray or PIL image
+    :background: np.ndarray or PIL image
+    :xy: top-left coordinate of image on background
+    Returns
+    -------
+    Blended image: np.ndarray or PIL image
+    '''
+    # NOTE: Need to update blend image with rgba image.
+    # Drop transparent area and keep the rest area(polygon).
+    if isinstance(image, str):
+        image = cv2.imread(str)
+    
+    if isinstance(background, str):
+        background = cv2.imread(background)
+
+    is_numpy = isNumpy(image)
+    background = toPIL(background)
+    image = toPIL(image)
+
+    w, h = image.size
+    background = background.resize((w,h))
+
+    image = create_transparent_image(image, threshold=50, mode='lower')
+
+    left, top = xy
+    if brightness_matching:
+        image = matching_brightness(src_image=image, dst_image=background)
+    if iterations is None:
+        iterations = random.randint(2, 4)
+    if wh is not None:
+        wid, hei = wh
+        image = image.resize((wid, hei), Image.BICUBIC)
+    else:
+        wid, hei = image.size
+    raw_background = background.copy()
+    # Create  smoothly mask 
+    if image.mode == 'RGBA':
+        # Let alpha channel of image is mask
+        alpha = image.split()[-1]
+        mask_alpha = alpha.copy()
+        mask_alpha = mask_alpha.point(lambda p: p > 10 and 255)
+        mask_alpha = mask_alpha.convert("RGB")
+        mask = Image.new("RGB", (background.size), (0, 0, 0))
+        mask.paste(mask_alpha, (left, top))
+    else:
+        mask = Image.new("RGB", (background.size), (0, 0, 0))
+        mask.paste((255,255,255), (left, top, left+wid, top+hei))
+    for _ in range(iterations):
+        mask = mask.filter(ImageFilter.BLUR)
+    mask_np = np.array(mask) /255
+    # Insert image to background
+    if image.mode == 'RGBA':
+        background.paste(image, (left, top), image)
+    else:
+        background.paste(image, (left, top))
+    # If do not use smooth_mode, return raw blend image
+    if not smooth_mode:
+        background = toNumpy(background) if is_numpy else toPIL(background)
+        return background
+    # Apply smooth effect
+    sharp_image_np = np.array(background)
+    background_np = np.array(raw_background)
+    # Blend 2 image with smooth mask
+    smooth_image = (sharp_image_np * mask_np + background_np*(1-mask_np)).astype(np.uint8)
+    smooth_image_blur = cv2.blur(smooth_image, (3,3))
+    alpha = 0.5
+    smooth_image = cv2.addWeighted(smooth_image, alpha, smooth_image_blur, 0.5, 0)
+    smooth_image = toNumpy(smooth_image) if is_numpy else toPIL(smooth_image)
+    return smooth_image
+
+
+def toPIL_RGBA(image):
+    image = toPIL(image)
+    if image.mode == 'RGBA':
+        return image
+    else:
+        image_rgba = image.convert(image, "RGBA")
+        return image_rgba
+
+
+def toNumpy_RGBA(image, alpha_value=255):
+    image = toNumpy(image)
+    if len(image.shape) == 3:
+        if image.shape[2] == 4:
+            return image
+        elif image.shape[2] == 3:
+            channel_1, channel_2, channel_3 = cv2.split(image)
+            alpha_channel = np.ones(channel_1.shape, dtype=channel_1.dtype) * alpha_value #creating a dummy alpha channel image.
+            image_RGBA = cv2.merge((channel_1, channel_2, channel_3, alpha_channel))
+            return image_RGBA
+    elif len(image.shape) == 2:
+        image = cv2.cvtColor(image, cv2.COLOR_GRAY2RGBA)
+        return image
+
+if __name__ == '__main__':
+    path_img = 'black_background_face_path'         
+    image = Image.open(path_img)
+    image = create_transparent_image(image, threshold=50, mode='lower')
+    path_bg = 'path_back_ground'
+    background = Image.open(path_bg)
+    coord_paste = (x, y)
+    blend_image = blend_smooth_image(image, background, xy=(x, y), smooth_mode=True, iterations=5)
+    
+    
+  
+  
