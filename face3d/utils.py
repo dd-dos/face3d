@@ -488,21 +488,21 @@ if __name__=='__main__':
     # img_list = list(Path('AFLW2000').glob('**/*.jpg'))
     # PARENT = 'AFLW2000'
     # os.makedirs(f'frontal_faces/{PARENT}', exist_ok=True)
-    # with mp.Pool(6) as p:
+    # with mp.Pool(mp.cpu_count()) as p:
     #     r = list(tqdm.tqdm(p.imap(task, img_list), total=len(img_list)))
 
     # print('Process AFLW2000-3D-Reannotated')
     # img_list = list(Path('AFLW2000-3D-Reannotated').glob('**/*.jpg'))
     # PARENT = 'AFLW2000-3D-Reannotated'
     # os.makedirs(f'frontal_faces/{PARENT}', exist_ok=True)
-    # with mp.Pool(6) as p:
+    # with mp.Pool(mp.cpu_count()) as p:
     #     r = list(tqdm.tqdm(p.imap(task, img_list), total=len(img_list)))
 
     print('Process 300VW-3D')
     img_list = list(Path('300VW-3D').glob('**/*.jpg'))
     PARENT = '300VW-3D'
     os.makedirs(f'frontal_faces/{PARENT}', exist_ok=True)
-    with mp.Pool(6) as p:
+    with mp.Pool(mp.cpu_count()) as p:
         r = list(tqdm.tqdm(p.imap(task, img_list), total=len(img_list)))
 
     # path_img = 'black_background_face_path'         
