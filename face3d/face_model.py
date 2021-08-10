@@ -74,7 +74,6 @@ class FaceModel:
             :img: output image after processing.
             :pt: output landmarks after processing. 
         """
-        
         img, pt = utils.crop_face_landmarks(img, pt, expand_ratio)
         img, pt = utils.resize_face_landmarks(img, pt, shape)
 
@@ -245,7 +244,7 @@ class FaceModel:
         utils.show_pts(r_img, r_pt[self.bfm.kpt_ind])
     
     def generate_rotated_3d_img(self, img, pt):
-        img, pt = self._preprocess_face_landmarks(img, pt, shape=(450,450))
+        img, pt = self._preprocess_face_landmarks(img, pt, shape=(256,256))
         r_img, params = self.augment_rotate(img, pt)
 
         blended_img = utils.blend_smooth_image(
@@ -254,3 +253,9 @@ class FaceModel:
         )
 
         return blended_img, params
+
+    def generate_3ddfa_params(self, img, pt):
+        img, pt = self._preprocess_face_landmarks(img, pt, shape=(256,256))
+        tddfa_params = self.get_3DDFA_params(img, pt)
+
+        return img, tddfa_params
