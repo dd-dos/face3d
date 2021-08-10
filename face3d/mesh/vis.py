@@ -20,5 +20,7 @@ def plot_mesh(vertices, triangles, subplot = [1,1,1], title = 'mesh', el = 90, a
 	ax.view_init(elev = el, azim = az)
 	ax.dist = dist
 	plt.title(title)
+	plt.show()
+	plt.clf()
 
 ### -------------- Todo: use vtk to visualize mesh? or visvis? or VisPy?

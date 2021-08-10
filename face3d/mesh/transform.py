@@ -42,34 +42,6 @@ def angle2matrix(angles):
     R=Rz.dot(Ry.dot(Rx))
     return R.astype(np.float32)
 
-def angle2matrix_3ddfa(angles):
-    ''' get rotation matrix from three rotation angles(radian). The same as in 3DDFA.
-    Args:
-        angles: [3,]. x, y, z angles
-        x: pitch.
-        y: yaw. 
-        z: roll. 
-    Returns:
-        R: 3x3. rotation matrix.
-    '''
-    # x, y, z = np.deg2rad(angles[0]), np.deg2rad(angles[1]), np.deg2rad(angles[2])
-    x, y, z = angles[0], angles[1], angles[2]
-    
-    # x
-    Rx=np.array([[1,      0,       0],
-                 [0, cos(x),  sin(x)],
-                 [0, -sin(x),   cos(x)]])
-    # y
-    Ry=np.array([[ cos(y), 0, -sin(y)],
-                 [      0, 1,      0],
-                 [sin(y), 0, cos(y)]])
-    # z
-    Rz=np.array([[cos(z), sin(z), 0],
-                 [-sin(z),  cos(z), 0],
-                 [     0,       0, 1]])
-    R = Rx.dot(Ry).dot(Rz)
-    return R.astype(np.float32)
-
 
 ## ------------------------------------------ 1. transform(transform, project, camera).
 ## ---------- 3d-3d transform. Transform obj in world space
@@ -210,17 +182,16 @@ def to_image(vertices, h, w, is_perspective = False):
     Returns:
         projected_vertices: [nver, 3]  
     '''
-    image_vertices = vertices.copy()
     if is_perspective:
         # if perspective, the projected vertices are normalized to [-1, 1]. so change it to image size first.
-        image_vertices[:,0] = image_vertices[:,0]*w/2
-        image_vertices[:,1] = image_vertices[:,1]*h/2
+        vertices[:,0] = vertices[:,0]*w/2
+        vertices[:,1] = vertices[:,1]*h/2
     # move to center of image
-    image_vertices[:,0] = image_vertices[:,0] + w/2
-    image_vertices[:,1] = image_vertices[:,1] + h/2
+    vertices[:,0] = vertices[:,0] + w/2
+    vertices[:,1] = vertices[:,1] + h/2
     # flip vertices along y-axis.
-    image_vertices[:,1] = h - image_vertices[:,1] - 1
-    return image_vertices
+    vertices[:,1] = h - vertices[:,1] - 1
+    return vertices
 
 
 #### -------------------------------------------2. estimate transform matrix from correspondences.
@@ -342,7 +313,7 @@ def matrix2angle(R):
      
     singular = sy < 1e-6
  
-    if  not singular :
+    if not singular :
         x = math.atan2(R[2,1] , R[2,2])
         y = math.atan2(-R[2,0], sy)
         z = math.atan2(R[1,0], R[0,0])

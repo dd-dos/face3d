@@ -15,6 +15,36 @@ from face3d import mesh
 from face3d import mesh_numpy
 from face3d.morphable_model import MorphabelModel
 
+def show_vertices(vertices: np.ndarray, v_type='3D'):
+    if v_type=='3D':
+        fig = plt.figure()
+        ax = fig.add_subplot(projection='3d')
+
+        _vertices = vertices.transpose(1, 0)
+        ax.scatter(_vertices[0],
+                   _vertices[1],
+                   _vertices[2],
+                   marker=".")
+
+        plt.show() 
+        plt.close()
+    elif v_type=='2D':
+        # ax, fig = plt.figure()
+
+        # _vertices = vertices.transpose(1, 0)
+        # ax.scatter(_vertices[0],
+        #            _vertices[1],
+        #            marker=".")
+        _vertices = vertices.transpose(1, 0)
+        plt.scatter(_vertices[0],
+                    _vertices[1],
+                    marker='.')
+        plt.show() 
+        plt.close()        
+    else:
+        return
+
+
 # load data 
 C = sio.loadmat('Data/example1.mat')
 vertices = C['vertices']; colors = C['colors']; triangles = C['triangles']
@@ -25,20 +55,22 @@ s = 180/(np.max(vertices[:,1]) - np.min(vertices[:,1]))
 R = mesh.transform.angle2matrix([0, 0, 0]) 
 t = [0, 0, 0]
 vertices = mesh.transform.similarity_transform(vertices, s, R, t)
+import ipdb; ipdb.set_trace(context=10)
+
 # h, w of rendering
 h = w = 256
 image_vertices = mesh.transform.to_image(vertices, h, w)
 
 # -----------------------------------------render colors
-# render colors python numpy
-st = time()
-rendering_cp = mesh_numpy.render.render_colors(image_vertices, triangles, colors, h, w)
-print('----------colors python: ', time() - st)
+# # render colors python numpy
+# st = time()
+# rendering_cp = mesh_numpy.render.render_colors(image_vertices, triangles, colors, h, w)
+# print('----------colors python: ', time() - st)
 
-# render colors python ras numpy
-st = time()
-rendering_cpr = mesh_numpy.render.render_colors_ras(image_vertices, triangles, colors, h, w)
-print('----------colors python ras: ', time() - st)
+# # render colors python ras numpy
+# st = time()
+# rendering_cpr = mesh_numpy.render.render_colors_ras(image_vertices, triangles, colors, h, w)
+# print('----------colors python ras: ', time() - st)
 
 # render colors python c++
 st = time()
@@ -74,13 +106,13 @@ print('----------texture c++: ', time() - st)
 # plot
 # plt.subplot(2,2,1)
 # plt.imshow(rendering_cp)
-# plt.subplot(2,2,2)
-# plt.imshow(rendering_cc)
-# plt.subplot(2,2,3)
-# plt.imshow(rendering_tp)
-# plt.subplot(2,2,4)
-# plt.imshow(rendering_tc)
-# plt.show()
+plt.subplot(2,2,2)
+plt.imshow(rendering_cc)
+plt.subplot(2,2,3)
+plt.imshow(rendering_tp)
+plt.subplot(2,2,4)
+plt.imshow(rendering_tc)
+plt.show()
 
 
 ## --------------------------- write obj

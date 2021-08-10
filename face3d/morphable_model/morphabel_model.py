@@ -1,6 +1,7 @@
 from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
+from face3d.mesh import transform
 
 import numpy as np
 import scipy.io as sio
@@ -8,8 +9,13 @@ from .. import mesh
 from . import fit
 from . import load
 
+
+
 class  MorphabelModel(object):
     """docstring for  MorphabelModel
+    MU: mean
+    PC: shape basis / principal components
+    EV: eigenvalue
     model: nver: number of vertices. ntri: number of triangles. *: must have. ~: can generate ones array for place holder.
             'shapeMU': [3*nver, 1]. *
             'shapePC': [3*nver, n_shape_para]. *
@@ -118,7 +124,7 @@ class  MorphabelModel(object):
         return mesh.transform.similarity_transform(vertices, s, R, t3d)
 
     # --------------------------------------------------- fitting
-    def fit(self, x, X_ind, max_iter = 4, isShow = False):
+    def fit(self, x, X_ind=None, max_iter = 4, isShow = False):
         ''' fit 3dmm & pose parameters
         Args:
             x: (n, 2) image points
@@ -130,6 +136,9 @@ class  MorphabelModel(object):
             fitted_ep: (n_ep, 1). exp parameters
             s, angles, t
         '''
+        if X_ind is None:
+            X_ind = self.kpt_ind
+
         if isShow:
             fitted_sp, fitted_ep, s, R, t = fit.fit_points_for_show(x, X_ind, self.model, n_sp = self.n_shape_para, n_ep = self.n_exp_para, max_iter = max_iter)
             angles = np.zeros((R.shape[0], 3))
@@ -139,5 +148,25 @@ class  MorphabelModel(object):
             fitted_sp, fitted_ep, s, R, t = fit.fit_points(x, X_ind, self.model, n_sp = self.n_shape_para, n_ep = self.n_exp_para, max_iter = max_iter)
             angles = mesh.transform.matrix2angle(R)
         return fitted_sp, fitted_ep, s, angles, t
+    
+
+    def reduced_fit(self, x, n_sp = 50, n_ep = 12, X_ind=None, max_iter = 4):
+        if X_ind is None:
+            X_ind = self.kpt_ind
+
+        fitted_sp, fitted_ep, s, R, t = fit.fit_points(x, X_ind, self.model, n_sp=n_sp, n_ep=n_ep, max_iter = max_iter)
+        angles = mesh.transform.matrix2angle(R)
+        
+        return fitted_sp, fitted_ep, s, angles, t
+    
+    def reduced_generated_vertices(self, shape_para, exp_para):
+        n_shp = shape_para.shape[0]
+        n_exp = exp_para.shape[0]
+        vertices = self.model['shapeMU'] + \
+                    self.model['shapePC'][:,:n_shp].dot(shape_para) + \
+                    self.model['expPC'][:, :n_exp].dot(exp_para)
+        vertices = np.reshape(vertices, [int(3), int(len(vertices)/3)], 'F').T
+
+        return vertices
 
 

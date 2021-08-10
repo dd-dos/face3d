@@ -1,0 +1,7 @@
+examples/Data/BFM/Out
+*.pyc
+face3d/mesh/cython/mesh_core_cython.cpp
+face3d/mesh/cython/mesh_core_cython.cpython-37m-x86_64-linux-gnu.so
+face3d/mesh/cython/build
+face3d/face_detector/weights
+face3d/tddfa
