@@ -7,9 +7,11 @@ import cv2
 import scipy.io as sio
 import glob
 import numpy as np
+import shutil
 
 
 if __name__=='__main__':
+    shutil.rmtree('300VW-3D_cropped_3ddfa', ignore_errors=True)
     os.makedirs('300VW-3D_cropped_3ddfa', exist_ok=True)
     for folder_path in glob.glob('300VW-3D_cropped/*'):
         folder_name = folder_path.split('/')[-1]
@@ -18,7 +20,7 @@ if __name__=='__main__':
             exist_ok=True
         )
 
-    model = FaceModel(bfm_path='examples/Data/BFM/Out/BFM.mat')
+    model = FaceModel()
     img_list = list(Path('300VW-3D_cropped').glob('**/*.jpg'))
     bag = []
     print(f'Push item to bag: ')
@@ -33,13 +35,13 @@ if __name__=='__main__':
         img, params = model.generate_3ddfa_params(img, pts)
 
         img_out_path = img_path.replace('300VW-3D_cropped','300VW-3D_cropped_3ddfa')
-        params_out_path = img_path.replace('300VW-3D_cropped','300VW-3D_cropped_3ddfa').replace('jpg', 'npy')
-        # cv2.imwrite(img_out_path, img)
-        # np.save(params_out_path, params)
+        params_out_path = img_path.replace('300VW-3D_cropped','300VW-3D_cropped_3ddfa').replace('jpg', 'mat')
+        cv2.imwrite(img_out_path, img)
+        sio.savemat(params_out_path, params)
 
-        cv2.imshow('', img)
-        cv2.waitKey(0)
-        cv2.destroyAllWindows()
+        # cv2.imshow('', img)
+        # cv2.waitKey(0)
+        # cv2.destroyAllWindows()
 
     # with mp.Pool(mp.cpu_count()) as p:
     #     r = list(tqdm.tqdm(p.imap(task, bag), total=len(bag)))

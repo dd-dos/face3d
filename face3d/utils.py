@@ -522,6 +522,11 @@ if __name__=='__main__':
     # coord_paste = (x, y)
     # blend_image = blend_smooth_image(image, background, xy=(x, y), smooth_mode=True, iterations=5)
     
-    
-  
-  
+@numba.njit()
+def get_landmarks_wrapbox(landmarks):
+    box_left = int(np.floor(np.min(landmarks.T[0])))
+    box_right = int(np.ceil(np.max(landmarks.T[0])))
+    box_top = int(np.floor(np.min(landmarks.T[1])))
+    box_bot = int(np.ceil(np.max(landmarks.T[1])))
+
+    return box_left, box_top, box_right, box_bot

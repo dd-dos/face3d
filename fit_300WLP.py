@@ -13,7 +13,7 @@ if __name__=='__main__':
     os.makedirs('300WLP_3ddfa', exist_ok=True)
     os.makedirs('300WLP_3ddfa/300WLP_3ddfa-verified', exist_ok=True)
 
-    model = FaceModel(bfm_path='examples/Data/BFM/Out/BFM.mat')
+    model = FaceModel()
     img_list = list(Path('300WLP').glob('**/*.jpg'))
     bag = []
     print(f'Push item to bag: ')
@@ -28,9 +28,13 @@ if __name__=='__main__':
         img, params = model.generate_3ddfa_params(img, pts)
 
         img_out_path = img_path.replace('300WLP','300WLP_3ddfa')
-        params_out_path = img_path.replace('300WLP','300WLP_3ddfa').replace('jpg', 'npy')
+        params_out_path = img_path.replace('300WLP','300WLP_3ddfa').replace('jpg', 'mat')
         cv2.imwrite(img_out_path, img)
-        np.save(params_out_path, params)
+        sio.savemat(params_out_path, params)
+
+        # cv2.imshow('', img)
+        # cv2.waitKey(0)
+        # cv2.destroyAllWindows()
 
     # with mp.Pool(mp.cpu_count()-2) as p:
     #     r = list(tqdm.tqdm(p.imap(task, bag), total=len(bag)))
