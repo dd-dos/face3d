@@ -20,18 +20,16 @@ def _get_colors(img, img_vertices):
 
 class FaceModel:
     def __init__(self, 
-                bfm_path,
                 n_shape=60,
                 n_exp=29):
         """
         Main class for processing face model.
 
         Args:
-            :bfm_path: path to basel face model.
             :n_shape: number of shape parameters.
             :n_exp: number of expression parameters.
         """
-        self.bfm = morphable_model.MorphabelModel(bfm_path)
+        self.bfm = morphable_model.MorphabelModel()
         self.n_shape = n_shape
         self.n_exp = n_exp
 
