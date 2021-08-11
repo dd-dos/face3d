@@ -8,7 +8,9 @@ from .. import mesh
 from . import fit
 from . import load
 
-
+import os
+cwd = os.path.abspath(os.getcwd())
+bfm_path = f'{cwd}/BFM/Out/BFM.mat'
 
 class  MorphabelModel(object):
     """docstring for  MorphabelModel
@@ -29,7 +31,7 @@ class  MorphabelModel(object):
             'tri_mouth': [114, 3] (start from 1, as a supplement to mouth triangles). ~
             'kpt_ind': [68,] (start from 1). ~
     """
-    def __init__(self, model_path, model_type = 'BFM'):
+    def __init__(self, model_path=bfm_path, model_type = 'BFM'):
         super( MorphabelModel, self).__init__()
         if model_type=='BFM':
             self.model = load.load_BFM(model_path)
