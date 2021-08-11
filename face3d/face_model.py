@@ -260,4 +260,7 @@ class FaceModel:
         tddfa_params = self.get_3DDFA_params(img, pt)
         roi_box = utils.get_landmarks_wrapbox(pt)
 
+        # vertex = self.reconstruct_vertex(img, tddfa_params)[self.bfm.kpt_ind]
+        # utils.show_pts(img, vertex)
+
         return img, {'params': tddfa_params, 'roi_box': roi_box}
