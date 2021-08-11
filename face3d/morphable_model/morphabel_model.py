@@ -12,7 +12,7 @@ import os
 cwd = os.path.abspath(os.getcwd())
 bfm_path = f'{cwd}/BFM/Out/BFM.mat'
 
-class  MorphabelModel(object):
+class MorphabelModel(object):
     """docstring for  MorphabelModel
     MU: mean
     PC: shape basis / principal components
