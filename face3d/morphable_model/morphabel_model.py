@@ -9,7 +9,7 @@ from . import fit
 from . import load
 
 import os
-cwd = os.path.abspath(os.getcwd())
+cwd = os.path.dirname(os.path.abspath(__file__))
 bfm_path = f'{cwd}/BFM/Out/BFM.mat'
 
 class MorphabelModel(object):
