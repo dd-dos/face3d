@@ -37,8 +37,17 @@ if __name__=='__main__':
 
         img_out_path = img_path.replace('AFLW2000','AFLW2000_rotated_3ddfa')
         params_out_path = img_path.replace('AFLW2000','AFLW2000_rotated_3ddfa').replace('jpg', 'npy')
-        cv2.imwrite(img_out_path, img)
-        np.save(params_out_path, params)
 
-    with mp.Pool(mp.cpu_count()) as p:
-        r = list(tqdm.tqdm(p.imap(task, bag), total=len(bag)))
+        cv2.imshow('', img)
+        cv2.waitKey(0)
+        cv2.destroyAllWindows()
+        # cv2.imwrite(img_out_path, img)
+        # np.save(params_out_path, params)
+
+
+    # with mp.Pool(mp.cpu_count()) as p:
+    #     r = list(tqdm.tqdm(p.imap(task, bag), total=len(bag)))
+
+    for item in bag:
+        print(item)
+        task(item)

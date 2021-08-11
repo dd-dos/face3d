@@ -38,12 +38,17 @@ if __name__=='__main__':
         if not check_frontal_face(pts):
             return
 
-        img, params = model.generate_rotated_3d_img(img, pts)
+        img, params = model.generate_rotated_3d_img(img, pts, blended=True)
 
         img_out_path = img_path.replace('300VW-3D_cropped','300VW-3D_cropped_rotated_3ddfa')
         params_out_path = img_path.replace('300VW-3D_cropped','300VW-3D_cropped_rotated_3ddfa').replace('jpg', 'npy')
-        cv2.imwrite(img_out_path, img)
-        np.save(params_out_path, params)
+        # cv2.imwrite(img_out_path, img)
+        # np.save(params_out_path, params)
+        cv2.imshow('', img)
+        cv2.waitKey(0)
+        cv2.destroyAllWindows()
 
-    with mp.Pool(mp.cpu_count()) as p:
-        r = list(tqdm.tqdm(p.imap(task, bag), total=len(bag)))
+    # with mp.Pool(mp.cpu_count()) as p:
+    #     r = list(tqdm.tqdm(p.imap(task, bag), total=len(bag)))
+    for item in tqdm.tqdm(bag):
+        task(item)

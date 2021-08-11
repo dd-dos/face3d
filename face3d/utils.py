@@ -47,6 +47,11 @@ def show_vertices(vertices: np.ndarray, type='3D'):
         plt.scatter(_vertices[0],
                     _vertices[1],
                     marker='.')
+        plt.xlim(-300, 300)
+        plt.ylim(-300, 300)
+        plt.xlabel("x")
+        plt.ylabel("y")
+        plt.grid()
         plt.show() 
         plt.close()        
     else:
@@ -63,13 +68,17 @@ def show_pts(img, pts):
     try:
         for i in range(pts.shape[0]):
             _pts = pts[i].astype(int)
-            _img = cv2.circle(_img, (_pts[0], _pts[1]),3,(0,255,0), -1, 8)
+            _img = cv2.circle(_img, (_pts[0], _pts[1]),1,(0,255,0), -1, 8)
     except Exception as e:
         print(e)
         import ipdb; ipdb.set_trace(context=10)
     
-    _img = cv2.cvtColor(_img, cv2.COLOR_BGR2RGB)
-    Image.fromarray(_img).show()
+    # _img = cv2.cvtColor(_img, cv2.COLOR_BGR2RGB)
+    # Image.fromarray(_img).show()
+    cv2.imshow('', _img)
+
+    cv2.waitKey(0)
+    cv2.destroyAllWindows()
 
 
 @numba.njit()
@@ -352,7 +361,7 @@ def blend_smooth_image(image, background, xy=(0,0), wh=None, iterations=None, sm
     w, h = image.size
     background = background.resize((w,h))
 
-    image = create_transparent_image(image, threshold=50, mode='lower')
+    image = create_transparent_image(image, threshold=50, mode='lower', get_full_object=True)
 
     left, top = xy
     if brightness_matching:
