@@ -37,8 +37,9 @@ if __name__=='__main__':
     # img, params = model.generate_rotated_3d_img(img, pt)
     img = cv2.imread('300VW-3D_cropped_3ddfa/519/1692.jpg')
     params = sio.loadmat('300VW-3D_cropped_3ddfa/519/1692.mat')['params']
+    params[11] = 100000
     pt = model.reconstruct_vertex(img, params)
-    show_pts(img, pt[model.bfm.kpt_ind])
+    show_vertices(pt[model.bfm.kpt_ind], '3D')
 
     ################################################################################
 

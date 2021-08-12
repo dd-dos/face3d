@@ -11,6 +11,7 @@ from . import load
 import os
 cwd = os.path.dirname(os.path.abspath(__file__))
 bfm_path = f'{cwd}/BFM/Out/BFM.mat'
+mean_std_path = f'{cwd}/BFM/params_mean_std_12_pose_60_shp_29_exp.mat'
 
 class MorphabelModel(object):
     """docstring for  MorphabelModel
@@ -49,6 +50,10 @@ class MorphabelModel(object):
         self.kpt_ind = self.model['kpt_ind']
         self.triangles = self.model['tri']
         self.full_triangles = np.vstack((self.model['tri'], self.model['tri_mouth']))
+
+        meta_101 = sio.loadmat(mean_std_path)
+        self.params_mean_101 = meta_101['mean'].astype(np.float32).reshape(-1,)
+        self.params_std_101 = meta_101['std'].astype(np.float32).reshape(-1,)
 
     # ------------------------------------- shape: represented with mesh(vertices & triangles(fixed))
     def get_shape_para(self, type = 'random'):
