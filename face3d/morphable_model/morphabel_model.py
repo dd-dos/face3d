@@ -53,7 +53,10 @@ class MorphabelModel(object):
 
         meta_101 = sio.loadmat(mean_std_path)
         self.params_mean_101 = meta_101['mean'].astype(np.float32).reshape(-1,)
-        self.params_std_101 = meta_101['std'].astype(np.float32).reshape(-1,)
+        params_std_101 = meta_101['std'].astype(np.float32).reshape(-1,)
+        params_std_101[11] = 1.
+        self.params_std_101 = params_std_101
+
 
     # ------------------------------------- shape: represented with mesh(vertices & triangles(fixed))
     def get_shape_para(self, type = 'random'):

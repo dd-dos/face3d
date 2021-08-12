@@ -119,6 +119,8 @@ class FaceModel:
         Return:
             :image_vertices: 3d face point cloud of input image.
         """
+        params = params * self.bfm.params_std_101 + self.bfm.params_mean_101
+
         h, w, _ = img.shape
 
         camera_matrix = params[:12].reshape(3, -1)
