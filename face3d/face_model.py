@@ -255,8 +255,8 @@ class FaceModel:
         else:
             return r_img, params
 
-    def generate_3ddfa_params(self, img, pt):
-        img, pt = self._preprocess_face_landmarks(img, pt, expand_ratio=1.1, shape=(256,256))
+    def generate_3ddfa_params(self, img, pt, expand_ratio=1.1, shape=(128,128)):
+        img, pt = self._preprocess_face_landmarks(img, pt, expand_ratio=expand_ratio, shape=shape)
         tddfa_params = self.get_3DDFA_params(img, pt)
         roi_box = utils.get_landmarks_wrapbox(pt)
 
