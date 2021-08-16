@@ -35,14 +35,11 @@ if __name__=='__main__':
     # img = cv2.imread('AFLW2000/image01649.jpg')
     # pt = sio.loadmat('AFLW2000/image01649.mat')['pt3d_68'][:2].T
     # img, params = model.generate_rotated_3d_img(img, pt)
-    img = cv2.imread('300VW-3D_cropped/505/0037.jpg')
-    pt = sio.loadmat('300VW-3D_cropped/505/0037.mat')['pt2D']
-    for i in range(pt.shape[0]):
-        _pts = pt[i].astype(int)
-        _img = cv2.circle(img, (_pts[0], _pts[1]),2,(0,255,0), -1, 5)
-    
-    cv2.imwrite(f'test_images.jpg', _img)
-
+    img = cv2.imread('300VW-3D_cropped_3ddfa/519/1692.jpg')
+    params = sio.loadmat('300VW-3D_cropped_3ddfa/519/1692.mat')['params']
+    params[11] = 100000
+    pt = model.reconstruct_vertex(img, params)
+    show_vertices(pt[model.bfm.kpt_ind], '3D')
 
     ################################################################################
 
