@@ -32,7 +32,7 @@ if __name__=='__main__':
         img_path, pts_path = item
         img = cv2.imread(img_path)
         pts = sio.loadmat(pts_path)['pt3d']
-        img, params = model.generate_3ddfa_params(img, pts)
+        img, params = model.generate_3ddfa_params(img, pts, preprocess=False)
 
         img_out_path = img_path.replace('300VW-3D_cropped','300VW-3D_cropped_3ddfa')
         params_out_path = img_path.replace('300VW-3D_cropped','300VW-3D_cropped_3ddfa').replace('jpg', 'mat')
