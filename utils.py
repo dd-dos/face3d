@@ -369,8 +369,8 @@ def check_close_eye(eye, threshold=0.2):
         return False
 
 def get_eyes(pts):
-    left = pts[36:42]
-    right = pts[42:48]
+    right = pts[36:42]
+    left = pts[42:48]
 
     return {
         'left': left,
