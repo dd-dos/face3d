@@ -14,13 +14,14 @@ import tqdm
 from PIL import Image, ImageFilter, ImageOps
 
 
-def show_ndarray_img(img):
+def show_ndarray_img(img, mode='RGB'):
     if np.mean(img) <= 1:
         img = (img*255).astype(np.uint8)
 
-    _img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+    if mode != 'RGB':
+        img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
     
-    Image.fromarray(_img).show()
+    Image.fromarray(img).show()
 
 
 def show_vertices(vertices: np.ndarray, type='3D'):
@@ -58,7 +59,7 @@ def show_vertices(vertices: np.ndarray, type='3D'):
         return
 
 
-def show_pts(img, pts):
+def show_pts(img, pts, mode='RGB'):
     if np.mean(img) <= 1:
         img = (img*255).astype(np.uint8)
 
@@ -73,12 +74,9 @@ def show_pts(img, pts):
         print(e)
         import ipdb; ipdb.set_trace(context=10)
     
-    # _img = cv2.cvtColor(_img, cv2.COLOR_BGR2RGB)
-    # Image.fromarray(_img).show()
-    cv2.imshow('', _img)
-
-    cv2.waitKey(0)
-    cv2.destroyAllWindows()
+    if mode != 'RGB':
+        _img = cv2.cvtColor(_img, cv2.COLOR_BGR2RGB)
+    Image.fromarray(_img).show()
 
 
 @numba.njit()
@@ -93,24 +91,27 @@ def crop_face_landmarks(img, landmarks, expand_ratio=1.0):
     # Get the box that wrap all landmarks.
     # box_top, box_left, box_bot, box_right = \
     # get_landmarks_wrapbox(landmarks)
-    box_left = int(np.ceil(np.min(landmarks.T[0])))
-    box_right = int(np.ceil(np.max(landmarks.T[0])))
-    box_top = int(np.ceil(np.min(landmarks.T[1])))
-    box_bot = int(np.ceil(np.max(landmarks.T[1])))
+    box_left = np.min(landmarks.T[0])
+    box_right = np.max(landmarks.T[0])
+    box_top = np.min(landmarks.T[1])
+    box_bot = np.max(landmarks.T[1])
 
-    box_height = box_bot-box_top
-    box_width = box_right-box_left
-    
     # Crop image to get the largest square region that satisfied:
     # 1. Contains all landmarks
     # 2. Center of the landmarks box is the center of the region.
-    center = [int(np.ceil((box_left+box_right)/2)), int(np.ceil((box_top+box_bot)/2))]
+    center = [(box_left+box_right)/2, (box_top+box_bot)/2]
     
     # Get the diameter of largest region 
     # that a landmark can reach when rotating.
-    max_length = int(np.ceil(np.sqrt(np.power(box_height,2)+np.power(box_width,2))))
+    box_height = box_bot-box_top
+    box_width = box_right-box_left
+    radius = max(box_height, box_width) / 2
+    bbox = [center[0] - radius, center[1] - radius, center[0] + radius, center[1] + radius]
+    center_x = (bbox[2] + bbox[0]) / 2
+    center_y = (bbox[3] + bbox[1]) / 2    
 
     # Crop a bit larger.
+    max_length = np.sqrt((bbox[2] - bbox[0]) ** 2 + (bbox[3] - bbox[1]) ** 2)
     crop_size = int(max_length/2 * expand_ratio)
 
     img_height, img_width, channel = img.shape
@@ -118,14 +119,14 @@ def crop_face_landmarks(img, landmarks, expand_ratio=1.0):
     canvas[crop_size:img_height+crop_size, crop_size:img_width+crop_size, :] = img
 
     # Adjust center coord.
-    center[0] += crop_size
-    center[1] += crop_size
+    center_x += crop_size
+    center_y += crop_size
 
     # Top left bottom right.
-    y1 = center[1]-int(crop_size)
-    x1 = center[0]-int(crop_size)
-    y2 = center[1]+int(crop_size)
-    x2 = center[0]+int(crop_size)
+    y1 = center_y-int(crop_size)
+    x1 = center_x-int(crop_size)
+    y2 = center_y+int(crop_size)
+    x2 = center_x+int(crop_size)
 
     # Crop image.
     img = canvas[y1:y2, x1:x2]

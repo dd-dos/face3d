@@ -73,7 +73,16 @@ class MorphabelModel(object):
             ep = -1.5 + 3*np.random.random([self.n_exp_para, 1])
             ep[6:, 0] = 0
 
-        return ep 
+        return ep
+    
+    def generate_params(self):
+        random_params = np.random.normal(
+            loc=self.params_mean_101,
+            scale=self.params_std_101,
+            size=(101,)
+        )
+
+        return random_params
 
     def generate_vertices(self, shape_para, exp_para):
         '''

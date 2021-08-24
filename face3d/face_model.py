@@ -108,20 +108,17 @@ class FaceModel:
 
         return tddfa_params
 
-    def reconstruct_vertex(self, img, params):
+    def _parse_params(self, params, de_normalize=True):
         """
-        Reconstruct a point cloud (~50k vertices) from 3DDFA parameters.
+        Parse 3DDFA parameters to camera matrix, shape and expression.
 
         Args:
-            :img: input image.
             :params: 3DDFA parameters.
-
-        Return:
-            :image_vertices: 3d face point cloud of input image.
+            :de_normalize: If input params is not coming from train dataset,
+                           set this False.
         """
-        params = params * self.bfm.params_std_101 + self.bfm.params_mean_101
-
-        h, w, _ = img.shape
+        if de_normalize:
+            params = params * self.bfm.params_std_101 + self.bfm.params_mean_101
 
         camera_matrix = params[:12].reshape(3, -1)
         scale, rotation_matrix, trans = mesh.transform.P2sRt(camera_matrix)
@@ -129,6 +126,25 @@ class FaceModel:
 
         shp = params[12:72].reshape(-1, 1)
         exp = params[72:].reshape(-1, 1)
+
+        return shp, exp, scale, angles, trans
+
+    def reconstruct_vertex(self, img, params, de_normalize=True):
+        """
+        Reconstruct a point cloud (~50k vertices) from 3DDFA parameters.
+
+        Args:
+            :img: input image.
+            :params: 3DDFA parameters.
+            :de_normalize: If input params is not coming from train dataset,
+                           set this False.
+
+        Return:
+            :image_vertices: 3d face point cloud of input image.
+        """
+        shp, exp, scale, angles, trans = self._parse_params(params, de_normalize)
+
+        h, w, _ = img.shape
 
         vertices = self.bfm.reduced_generated_vertices(shp, exp)
         transformed_vertices = self.bfm.transform(vertices, scale, angles, trans)
@@ -179,6 +195,7 @@ class FaceModel:
             :pt: 68 3D landmarks.
             :angles: rotate angles.
             :base_size: human base face size. 1 unit ~ 0.1 cm.
+
         Returns:
             :rotated_img: rotated image.
             :params: 3DDFA parameters of rotated image.
@@ -268,3 +285,37 @@ class FaceModel:
         # utils.show_pts(img, vertex)
 
         return img, {'params': tddfa_params, 'roi_box': roi_box}
+    
+    def generate_sample(self, height, width, params, background=None):
+        """
+        Generate face sample from 3DDFA parameters.
+        Color is randomized.
+
+        Args:
+            :height: height of generated image.
+            :width: width of generatewd image.
+            :params: 3DDFA parameters.
+            :background: background to fill image.
+
+        Return:
+            :img: face image corresponding to the 3DDFA params.
+            #TODO: verification need.
+        """
+
+        tp = self.bfm.get_tex_para('random')
+        vertices = self.reconstruct_vertex(
+            np.zeros((height,width,3)), 
+            params,
+            de_normalize=False
+        )
+
+        image = mesh.render.render_colors(
+            vertices=vertices, 
+            triangles=self.bfm.triangles, 
+            colors=self.bfm.generate_colors(tp), 
+            h=height,
+            w=width,
+            BG=background
+        )
+
+        return image

@@ -1,78 +1,72 @@
+from PIL.Image import new
+from matplotlib.pyplot import show
+from face3d.mesh import render, transform
 import cv2
 import numba
 import numpy as np
 import scipy.io as sio
-import torch
-import tqdm
-from PIL import Image
 
-import face3d
-from face3d import mesh, utils
+from face3d import face_model, mesh, utils
 from face3d.morphable_model import MorphabelModel
 from face3d.utils import (crop_face_landmarks, isgray, resize_face_landmarks,
                           show_ndarray_img, show_pts, show_vertices)
 
-@numba.njit()
-def shift(img, params, shift_value=(-20,30)):
-    img_height, img_width = img.shape[:2]
-    canvas = np.zeros((img_height*2,img_width*2,3))
-    crop_size = int(img_height/2)
-    canvas[crop_size:img_height+crop_size, crop_size:img_width+crop_size, :] = img
-    
-    new_x1 = crop_size+shift_value[0]
-    new_y1 = crop_size+shift_value[1]
-    new_x2 = crop_size+img_width+shift_value[0]
-    new_y2 = crop_size+img_height+shift_value[1]
-    
-    new_img = canvas[new_y1:new_y2, new_x1:new_x2]
-    params[3] -= shift_value[0]
-    params[7] += shift_value[1]
+model = face_model.FaceModel()
 
-    return new_img, params
+def generated_rotated_sample(height, 
+                            width, 
+                            params=None, 
+                            de_norm=False, 
+                            adjusted_angles=[0, 0, 0],
+                            background=None,
+                            ):
+    if params is None:
+        params = model.bfm.generate_params()
+
+    shp, exp, scale, angles, trans = \
+        model._parse_params(params, de_normalize=de_norm)
+
+    vertices = model.bfm.reduced_generated_vertices(shp, exp)
+    vertices = vertices - np.mean(vertices, 0)[np.newaxis, :]
+
+    new_angles = np.array(adjusted_angles)
+    trans = [0,-10,0]
+    scale = 6e-4
+
+    transformed_vertices = model.bfm.transform(
+        vertices, scale, new_angles, trans
+    ) 
+
+    image_vertices = mesh.transform.to_image(
+        transformed_vertices, height, width
+    )
+
+    tp = model.bfm.get_tex_para('random')
+    rendering = mesh.render.render_colors(
+                    image_vertices, 
+                    model.bfm.triangles, 
+                    model.bfm.generate_colors(tp), 
+                    height, 
+                    width,
+                    BG=background
+                )
+
+    rendering = np.minimum((np.maximum(rendering, 0)), 1)
+
+    return rendering, image_vertices
 
 if __name__=='__main__':
-    import time
+    img = cv2.imread('AFLW2000_3ddfa/image00002.jpg')
+    height, width = img.shape[:2]
 
-    # while True:
-    #     t0 = time.time()
-    #     pt3d_to_3dmm()
-    #     print(time.time()-t0)
-    #     break
-    from face3d import face_model
-    model = face_model.FaceModel()
-    img = cv2.imread('examples/Data/300WLP-std_134212_1_0.jpg')
-    pt = sio.loadmat('examples/Data/300WLP-std_134212_1_0.mat')['pt3d']
-    # pt[37] = pt[41]
-    # pt[38] = pt[40]
-    # pt[43] = pt[47]
-    # pt[44] = pt[46]
-    
-    img, params = model.generate_3ddfa_params(img, pt, expand_ratio=0.95)
-    params = params['params'].reshape(101,)
-    # img, params = shift(img, params)
-    new_pt = model.reconstruct_vertex(img, params)
-    # img = cv2.imread('AFLW2000/image01649.jpg')
-    # pt = sio.loadmat('AFLW2000/image01649.mat')['pt3d_68'][:2].T
-    # img, params = model.generate_rotated_3d_img(img, pt)
-    # img = cv2.imread('300VW-3D_cropped_3ddfa/519/1692.jpg')
-    # params = sio.loadmat('300VW-3D_cropped_3ddfa/519/1692.mat')['params']
-    # params[11] = 100000
-    # pt = model.reconstruct_vertex(img, params)
-    # show_vertices(new_pt[model.bfm.kpt_ind], '2D')
-    show_pts(img, new_pt[model.bfm.kpt_ind])
+    background = cv2.imread('hair.jpeg')
+    background = cv2.cvtColor(background, cv2.COLOR_BGR2RGB).astype(np.float32) / 255.
+    background = cv2.resize(background, (width, height))
 
-    ################################################################################
-
-    # from face3d.tddfa.denseface import FaceAlignment
-    # from face3d.utils import crop_face_landmarks
-
-    # model = FaceAlignment('face3d/tddfa/weights/2021-07-22/last.pth.tar', device='cpu')
-
-    # img = cv2.imread('AFLW2000/image00050.jpg')
-    # pt = sio.loadmat('AFLW2000/image00050.mat')['pt3d_68'][:2].T
-    # img, pt = crop_face_landmarks(img, pt)
-    # h, w, _ = img.shape
-    # n_img = model.draw_landmarks(img, [torch.tensor([0,0,w,h])])
-    # utils.show_ndarray_img(n_img)
-
-    
+    params = sio.loadmat('AFLW2000_3ddfa/image00002.mat')['params'].reshape(-1,)
+    new_img, new_pts = generated_rotated_sample(height, width)
+    new_img = cv2.cvtColor((new_img*255).astype(np.uint8), cv2.COLOR_RGB2BGR)
+    cv2.imwrite('generated.jpg', new_img)
+    # sio.savemat('generated.mat', {'pt3d': new_pts[:,:2][model.bfm.kpt_ind]})
+    show_ndarray_img(new_img)
+    # show_pts(new_img, new_pts[:,:2][model.bfm.kpt_ind])
