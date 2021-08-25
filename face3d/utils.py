@@ -59,7 +59,15 @@ def show_vertices(vertices: np.ndarray, type='3D'):
         return
 
 
-def show_pts(img, pts, mode='RGB'):
+def draw_landmarks(img, pts, out='foo.jpg'):
+    for i in range(pts.shape[0]):
+        _pts = pts[i].astype(int)
+        img = cv2.circle(img, (_pts[0], _pts[1]),1,(0,255,0), -1, 8)
+
+    cv2.imwrite(out, img)
+
+
+def show_pts(img, pts):
     if np.mean(img) <= 1:
         img = (img*255).astype(np.uint8)
 

@@ -9,8 +9,7 @@ import scipy.io as sio
 from face3d import face_model, mesh, utils
 from face3d.morphable_model import MorphabelModel
 from face3d.utils import (crop_face_landmarks, isgray, resize_face_landmarks,
-                          show_ndarray_img, show_pts, show_vertices)
-from utils import flip_ImAndPts, fliplr_face_landmarks
+                          show_ndarray_img, show_pts, show_vertices, draw_landmarks)
 
 model = face_model.FaceModel()
 
