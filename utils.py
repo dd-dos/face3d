@@ -388,13 +388,14 @@ def resize_face_landmarks(img, pts_2D, landmarks, shape=(256,256)):
     return img, pts_2D, landmarks
 
 
-def check_close_eye(eye, threshold=0.2):
+def check_close_eye(eye, threshold=0.1):
     p2_minus_p6 = np.linalg.norm(eye[1] - eye[5])
     p3_minus_p5 = np.linalg.norm(eye[2] - eye[4])
     p1_minus_p4 = np.linalg.norm(eye[0] - eye[3])
     ear = (p2_minus_p6 + p3_minus_p5) / (2.0 * p1_minus_p4)
 
-    if ear <= 0.2:
+    if ear <= threshold:
+        print(ear)
         return True
     else:
         return False
