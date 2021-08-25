@@ -169,6 +169,21 @@ def flip_ImAndPts(image,landmarks):
     return flipImg,flipLnd
 
 
+def fliplr_face_landmarks(img, pts):
+    """
+    Flip left right image and landmarks.
+
+    Args:
+        :img: input image.
+        :pts: np.array landmarks of shape (68,-1) 
+    """
+    flip_img = cv2.flip(img, 1)
+    width = img.shape[1]
+    pts.T[0] = width - pts.T[0]
+
+    return flip_img, pts
+
+
 def affine_trans(image,landmarks,angle=None):
     if angle is None:
         angle = 30*torch.randn(1)

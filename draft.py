@@ -10,6 +10,7 @@ from face3d import face_model, mesh, utils
 from face3d.morphable_model import MorphabelModel
 from face3d.utils import (crop_face_landmarks, isgray, resize_face_landmarks,
                           show_ndarray_img, show_pts, show_vertices)
+from utils import flip_ImAndPts, fliplr_face_landmarks
 
 model = face_model.FaceModel()
 
@@ -17,7 +18,7 @@ def generated_rotated_sample(height,
                             width, 
                             params=None, 
                             de_norm=False, 
-                            adjusted_angles=[0, 0, 0],
+                            adjusted_angles=[-40, 0, 0],
                             background=None,
                             ):
     if params is None:
@@ -56,17 +57,13 @@ def generated_rotated_sample(height,
     return rendering, image_vertices
 
 if __name__=='__main__':
-    img = cv2.imread('AFLW2000_3ddfa/image00002.jpg')
-    height, width = img.shape[:2]
+    img = cv2.imread('300VW-3D_cropped/001/0001.jpg')
+    vertex = sio.loadmat('300VW-3D_cropped/001/0001.mat')['pt3d']
+    # vertex = model.reconstruct_vertex(img, params, de_normalize=False)[:,:2][model.bfm.kpt_ind]
 
-    background = cv2.imread('hair.jpeg')
-    background = cv2.cvtColor(background, cv2.COLOR_BGR2RGB).astype(np.float32) / 255.
-    background = cv2.resize(background, (width, height))
-
-    params = sio.loadmat('AFLW2000_3ddfa/image00002.mat')['params'].reshape(-1,)
-    new_img, new_pts = generated_rotated_sample(height, width)
-    new_img = cv2.cvtColor((new_img*255).astype(np.uint8), cv2.COLOR_RGB2BGR)
-    cv2.imwrite('generated.jpg', new_img)
-    # sio.savemat('generated.mat', {'pt3d': new_pts[:,:2][model.bfm.kpt_ind]})
-    show_ndarray_img(new_img)
-    # show_pts(new_img, new_pts[:,:2][model.bfm.kpt_ind])
+    import time
+    t0 = time.time()
+    img, vertex = model._preprocess_face_landmarks(img, vertex)
+    rimg, _ = model.augment_rotate(img, vertex, [-70,0,0], base_size=180*0.7, de_normalize=False)
+    print(time.time() - t0)
+    show_ndarray_img(rimg)

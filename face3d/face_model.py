@@ -106,7 +106,7 @@ class FaceModel:
         #     'trans': trans,
         # }
 
-        return tddfa_params
+        return tddfa_params.reshape(-1,)
 
     def _parse_params(self, params, de_normalize=True):
         """
@@ -185,7 +185,7 @@ class FaceModel:
         rendering = np.minimum((np.maximum(rendering, 0)), 1)
         return rendering, image_vertices
 
-    def augment_rotate(self, img, pt, angles=[-70,0,0], base_size=180):
+    def augment_rotate(self, img, pt, angles=[-70,0,0], base_size=180, de_normalize=False):
         """
         Rotate input image in 3D space.
         Remember to preprocess image and landmarks points if needed.
@@ -201,7 +201,8 @@ class FaceModel:
             :params: 3DDFA parameters of rotated image.
         """
         params = self.get_3DDFA_params(img, pt)
-        vertices = self.reconstruct_vertex(img, params)
+        vertices = self.reconstruct_vertex(img, params, de_normalize=de_normalize)
+
         colors = _get_colors(img, vertices.astype(np.uint16))
 
         h,w,_ = img.shape
@@ -281,8 +282,18 @@ class FaceModel:
         tddfa_params = self.get_3DDFA_params(img, pt)
         roi_box = utils.get_landmarks_wrapbox(pt)
 
-        # vertex = self.reconstruct_vertex(img, tddfa_params)[self.bfm.kpt_ind]
-        # utils.show_pts(img, vertex)
+        vertex = self.reconstruct_vertex(
+            img, 
+            tddfa_params.reshape(-1,),
+            de_normalize=False
+        )[self.bfm.kpt_ind]
+        box_left = np.min(vertex.T[0])
+        box_right = np.max(vertex.T[0])
+        box_top = np.min(vertex.T[1])
+        box_bot = np.max(vertex.T[1])
+        print([(box_left+box_right)/2, (box_top+box_bot)/2])
+        utils.show_pts(img, vertex)
+        import ipdb; ipdb.set_trace(context=10)
 
         return img, {'params': tddfa_params, 'roi_box': roi_box}
     

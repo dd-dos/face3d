@@ -11,17 +11,17 @@ import shutil
 
 
 if __name__=='__main__':
-    shutil.rmtree('300VW-3D_cropped_non_closed_eyes_3ddfa', ignore_errors=True)
-    os.makedirs('300VW-3D_cropped_non_closed_eyes_3ddfa', exist_ok=True)
-    for folder_path in glob.glob('300VW-3D_cropped_non_closed_eyes/*'):
+    shutil.rmtree('300VW-3D_cropped_opened_eyes_3ddfa', ignore_errors=True)
+    os.makedirs('300VW-3D_cropped_opened_eyes_3ddfa', exist_ok=True)
+    for folder_path in glob.glob('300VW-3D_cropped_opened_eyes/*'):
         folder_name = folder_path.split('/')[-1]
         os.makedirs(
-            os.path.join('300VW-3D_cropped_non_closed_eyes_3ddfa', folder_name),
+            os.path.join('300VW-3D_cropped_opened_eyes_3ddfa', folder_name),
             exist_ok=True
         )
 
     model = FaceModel()
-    img_list = list(Path('300VW-3D_cropped_non_closed_eyes').glob('**/*.jpg'))
+    img_list = list(Path('300VW-3D_cropped_opened_eyes').glob('**/*.jpg'))
 
     bag = []
     print(f'Push item to bag: ')
@@ -37,7 +37,7 @@ if __name__=='__main__':
         pts = sio.loadmat(pts_path)['pt3d']
         img, params = model.generate_3ddfa_params(img, pts, preprocess=False)
 
-        img_out_path = img_path.replace('300VW-3D_cropped_non_closed_eyes','300VW-3D_cropped_non_closed_eyes_3ddfa')
+        img_out_path = img_path.replace('300VW-3D_cropped_opened_eyes','300VW-3D_cropped_opened_eyes_3ddfa')
         params_out_path = img_out_path.replace('jpg', 'mat')
         cv2.imwrite(img_out_path, img)
         sio.savemat(params_out_path, params)
