@@ -67,7 +67,7 @@ def draw_landmarks(img, pts, out='foo.jpg'):
     cv2.imwrite(out, img)
 
 
-def show_pts(img, pts):
+def show_pts(img, pts, mode='RGB'):
     if np.mean(img) <= 1:
         img = (img*255).astype(np.uint8)
 

@@ -14,6 +14,7 @@ from __future__ import print_function
 import numpy as np
 import math
 from math import cos, sin
+import numba
 
 def angle2matrix(angles):
     ''' get rotation matrix from three rotation angles(degree). right-handed.
@@ -62,6 +63,7 @@ def rotate(vertices, angles):
 
     return rotated_vertices
 
+# @numba.njit()
 def similarity_transform(vertices, s, R, t3d):
     ''' similarity transform. dof = 7.
     3D: s*R.dot(X) + t
@@ -75,7 +77,7 @@ def similarity_transform(vertices, s, R, t3d):
         transformed vertices: [nver, 3]
     '''
     t3d = np.squeeze(np.array(t3d, dtype = np.float32))
-    transformed_vertices = s * vertices.dot(R.T) + t3d[np.newaxis, :]
+    transformed_vertices = s * vertices.dot(R.T) + t3d
 
     return transformed_vertices
 
@@ -170,7 +172,7 @@ def perspective_project(vertices, fovy, aspect_ratio = 1., near = 0.1, far = 100
     # projected_vertices[:,1] = -(near/top)*vertices[:,1]/vertices[:,2]
     return projected_vertices
 
-
+@numba.njit()
 def to_image(vertices, h, w, is_perspective = False):
     ''' change vertices to image coord system
     3d system: XYZ, center(0, 0, 0)

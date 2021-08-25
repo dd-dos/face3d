@@ -27,6 +27,8 @@ def generated_rotated_sample(height,
         model._parse_params(params, de_normalize=de_norm)
 
     vertices = model.bfm.reduced_generated_vertices(shp, exp)
+    colors = face_model._get_colors(img, vertices.astype(np.uint16))
+
     vertices = vertices - np.mean(vertices, 0)[np.newaxis, :]
 
     new_angles = np.array(adjusted_angles)
@@ -41,11 +43,11 @@ def generated_rotated_sample(height,
         transformed_vertices, height, width
     )
 
-    tp = model.bfm.get_tex_para('random')
+    # tp = model.bfm.get_tex_para('random')
     rendering = mesh.render.render_colors(
                     image_vertices, 
                     model.bfm.triangles, 
-                    model.bfm.generate_colors(tp), 
+                    colors, 
                     height, 
                     width,
                     BG=background
@@ -56,13 +58,11 @@ def generated_rotated_sample(height,
     return rendering, image_vertices
 
 if __name__=='__main__':
-    img = cv2.imread('300VW-3D_cropped/001/0001.jpg')
-    vertex = sio.loadmat('300VW-3D_cropped/001/0001.mat')['pt3d']
-    # vertex = model.reconstruct_vertex(img, params, de_normalize=False)[:,:2][model.bfm.kpt_ind]
-
-    import time
-    t0 = time.time()
-    img, vertex = model._preprocess_face_landmarks(img, vertex)
-    rimg, _ = model.augment_rotate(img, vertex, [-70,0,0], base_size=180*0.7, de_normalize=False)
-    print(time.time() - t0)
-    show_ndarray_img(rimg)
+    # img, vertex = model._preprocess_face_landmarks(img, vertex)
+    # rimg, _ = model.augment_rotate(img, vertex, [-70,0,0], base_size=180*0.7, de_normalize=False)
+    img = cv2.imread('0385.jpg')
+    vertex = sio.loadmat('0385.mat')['pt3d']
+    rimg, params = model.generate_rotated_3d_img(
+        img, vertex, [-70,30,0], blended=True)
+    vertex = model.reconstruct_vertex(rimg, params, False)[model.bfm.kpt_ind]
+    show_pts(rimg, vertex)

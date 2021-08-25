@@ -58,7 +58,7 @@ class FaceModel:
         )
         return shp, exp, scale, angles, trans
 
-    def _preprocess_face_landmarks(self, img, pt, expand_ratio=1.5, shape=(128,128)):
+    def _preprocess_face_landmarks(self, img, pt, expand_ratio=1., shape=(128,128)):
         """
         Crop then resize image and landmarks to target shape.
 
@@ -185,7 +185,7 @@ class FaceModel:
         rendering = np.minimum((np.maximum(rendering, 0)), 1)
         return rendering, image_vertices
 
-    def augment_rotate(self, img, pt, angles=[-70,0,0], base_size=180, de_normalize=False):
+    def augment_rotate(self, img, pt, angles=[-70,0,0]):
         """
         Rotate input image in 3D space.
         Remember to preprocess image and landmarks points if needed.
@@ -200,10 +200,19 @@ class FaceModel:
             :rotated_img: rotated image.
             :params: 3DDFA parameters of rotated image.
         """
+        import time
+        foo = []
+        foo.append(time.time())
+        
         params = self.get_3DDFA_params(img, pt)
-        vertices = self.reconstruct_vertex(img, params, de_normalize=de_normalize)
+        
+        foo.append(time.time())
 
-        colors = _get_colors(img, vertices.astype(np.uint16))
+        vertices = self.reconstruct_vertex(img, params, de_normalize=False)
+        
+        foo.append(time.time())
+
+        colors = _get_colors(img, vertices.astype(int))
 
         h,w,_ = img.shape
         vertices.T[1] = h - 1 - vertices.T[1]
@@ -219,18 +228,24 @@ class FaceModel:
         camera['proj_type'] = 'orthographic'
         obj['vertices'] = vertices
         obj['colors'] = colors
-        obj['scale'] = base_size/(np.max(vertices[:,1]) - np.min(vertices[:,1]))
+        obj['scale'] = np.float32(1)
         if angles is None:
             angle_choices = [[-i-1,0,0] for i in range(59,70)]
             obj['angles'] = random.choice(angle_choices)
         else:
             obj['angles'] = angles
-        obj['trans'] = [0, 0, 0]
+        obj['trans'] = [0,0,0]
 
         rotated_img, rotated_vertices = self._transform_test(obj, camera, h, w)
+
+        foo.append(time.time())
+        
         params = self.get_3DDFA_params(
             rotated_img, rotated_vertices[self.bfm.kpt_ind][:,:2]
         )
+
+        foo.append(time.time())
+
         # new_rotation_matrix = mesh.transform.angle2matrix(list(extra['angles'])+obj['angles'])
         # new_scale_rotation_matrix = extra['scale'] * obj['scale'] * new_rotation_matrix 
         
@@ -243,6 +258,9 @@ class FaceModel:
 
         # utils.show_pts(rotated_img, rotated_vertices[self.bfm.kpt_ind])
         rotated_img = (rotated_img*255).astype(np.uint8)
+
+        for idx in range(len(foo)-1):
+            print(foo[idx+1]-foo[idx])
 
         return rotated_img, params
 
@@ -261,16 +279,18 @@ class FaceModel:
         r_pt = self.reconstruct_vertex(r_img, params)
         utils.show_pts(r_img, r_pt[self.bfm.kpt_ind])
     
-    def generate_rotated_3d_img(self, img, pt, angles=None, blended=False):
-        img, pt = self._preprocess_face_landmarks(img, pt, shape=(256,256))
+    def generate_rotated_3d_img(self, img, pt, angles=None, blended=False, shape=(128,128)):
+        img, pt = self._preprocess_face_landmarks(img, pt, shape=shape)
         r_img, params = self.augment_rotate(img, pt, angles=angles)
 
         if blended:
+            import time
+            t0 = time.time()
             blended_img = utils.blend_smooth_image(
                 r_img,
                 random.choice(BACKGROUND)
             )
-
+            print(time.time()-t0)
             return blended_img, params
         else:
             return r_img, params
