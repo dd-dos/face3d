@@ -24,7 +24,7 @@ if __name__=='__main__':
         img_path, pts_path = item
         img = cv2.imread(img_path)
         pts = sio.loadmat(pts_path)['pt3d_68'][:2].T
-        img, params = model.generate_3ddfa_params(img, pts, expand_ratio=0.95)
+        img, params = model.generate_3ddfa_params(img, pts)
 
         img_out_path = img_path.replace('AFLW2000','AFLW2000_3ddfa')
         params_out_path = img_path.replace('AFLW2000','AFLW2000_3ddfa').replace('jpg', 'mat')
