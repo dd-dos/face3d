@@ -9,7 +9,6 @@ import numba
 import numpy as np
 import PIL
 import scipy.io as sio
-from sympy.core.numbers import I
 import torchfile
 import tqdm
 from PIL import Image, ImageFilter, ImageOps
@@ -22,7 +21,10 @@ def show_ndarray_img(img, mode='RGB'):
     if mode != 'RGB':
         img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
     
-    Image.fromarray(img).show()
+    # Image.fromarray(img).show()
+    cv2.imshow('',img)
+    cv2.waitKey(0)
+    cv2.destroyAllWindows()
 
 
 def show_vertices(vertices: np.ndarray, type='3D'):
@@ -88,7 +90,7 @@ def show_pts(img, pts, mode='RGB'):
     Image.fromarray(_img).show()
 
 
-# @numba.njit()
+@numba.njit()
 def crop_face_landmarks(img, landmarks, expand_ratio=1.0):
     """
     Pad and crop to retain landmarks when rotating.
@@ -335,9 +337,9 @@ def create_transparent_image(image, threshold, mode='equal', get_full_object=Fal
         _, bin_mask = cv2.threshold(transparent_area_int, 127, 255, 0)
         cnts, _ = cv2.findContours(bin_mask, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
         # Get biggest contour
-        large_cnt = max(cnts, key = cv2.contourArea)
+        # large_cnt = max(cnts, key = cv2.contourArea)
         transparent_area = np.zeros(transparent_area.shape)
-        cv2.fillPoly(transparent_area, pts=[large_cnt], color=(255,255,255))
+        cv2.fillPoly(transparent_area, pts=cnts, color=(255,255,255))
         transparent_area = np.invert(np.bool_(transparent_area))
         
     image_rgba[transparent_area, -1] = 0 
@@ -359,7 +361,7 @@ def blend_smooth_image(image, background, xy=(0,0), wh=None, iterations=None, sm
     # NOTE: Need to update blend image with rgba image.
     # Drop transparent area and keep the rest area(polygon).
     if isinstance(image, str):
-        image = cv2.imread(str)
+        q = cv2.imread(str)
     
     if isinstance(background, str):
         background = cv2.imread(background)

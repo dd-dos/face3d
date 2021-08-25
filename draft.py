@@ -62,7 +62,11 @@ if __name__=='__main__':
     # rimg, _ = model.augment_rotate(img, vertex, [-70,0,0], base_size=180*0.7, de_normalize=False)
     img = cv2.imread('0385.jpg')
     vertex = sio.loadmat('0385.mat')['pt3d']
-    rimg, params = model.generate_rotated_3d_img(
-        img, vertex, [-70,30,0], blended=True)
-    vertex = model.reconstruct_vertex(rimg, params, False)[model.bfm.kpt_ind]
-    show_pts(rimg, vertex)
+    output = model.generate_3ddfa_params_plus(
+        img, vertex, preprocess=False, horizontal=[0], vertical=[0])
+    
+    for out in output:
+        rimg = out[0]
+        params = out[1]['params']
+        vertex = model.reconstruct_vertex(rimg, params, False)[model.bfm.kpt_ind]
+        show_pts(rimg, vertex, 'BGR')

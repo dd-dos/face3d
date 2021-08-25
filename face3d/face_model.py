@@ -1,3 +1,4 @@
+from face3d.mesh.transform import rotate
 from . import morphable_model
 from . import utils
 from . import mesh
@@ -87,7 +88,7 @@ class FaceModel:
             :pt: 68 3D landmarks.
 
         Returns:
-            :tddfa_params: 3DDFA parameters. Training ready.
+            :params: 3DDFA parameters. Training ready.
         """
         shp, exp, scale, angles, trans = self._get_params(img, pt)
         rotation_matrix = mesh.transform.angle2matrix(angles)
@@ -96,17 +97,17 @@ class FaceModel:
             (scale_rotation_matrix, trans.reshape(-1,1)), axis=1
         )
         dense_camera_matrix = camera_matrix.reshape((12,1))
-        tddfa_params = np.concatenate((dense_camera_matrix, shp, exp), axis=0)
+        params = np.concatenate((dense_camera_matrix, shp, exp), axis=0)
         
-        # extra = {
-        #     'shp': shp,
-        #     'exp': exp,
-        #     'scale': scale,
-        #     'angles': angles,
-        #     'trans': trans,
-        # }
+        extra = {
+            'shp': shp,
+            'exp': exp,
+            'scale': scale,
+            'angles': angles,
+            'trans': trans,
+        }
 
-        return tddfa_params.reshape(-1,)
+        return params.reshape(-1,), extra
 
     def _parse_params(self, params, de_normalize=True):
         """
@@ -200,17 +201,8 @@ class FaceModel:
             :rotated_img: rotated image.
             :params: 3DDFA parameters of rotated image.
         """
-        import time
-        foo = []
-        foo.append(time.time())
-        
-        params = self.get_3DDFA_params(img, pt)
-        
-        foo.append(time.time())
-
+        params, _ = self.get_3DDFA_params(img, pt)
         vertices = self.reconstruct_vertex(img, params, de_normalize=False)
-        
-        foo.append(time.time())
 
         colors = _get_colors(img, vertices.astype(int))
 
@@ -237,30 +229,11 @@ class FaceModel:
         obj['trans'] = [0,0,0]
 
         rotated_img, rotated_vertices = self._transform_test(obj, camera, h, w)
-
-        foo.append(time.time())
         
-        params = self.get_3DDFA_params(
+        params, _ = self.get_3DDFA_params(
             rotated_img, rotated_vertices[self.bfm.kpt_ind][:,:2]
         )
-
-        foo.append(time.time())
-
-        # new_rotation_matrix = mesh.transform.angle2matrix(list(extra['angles'])+obj['angles'])
-        # new_scale_rotation_matrix = extra['scale'] * obj['scale'] * new_rotation_matrix 
-        
-        # new_trans = obj['scale'] * np.array(extra['trans']) @ mesh.transform.angle2matrix(obj['angles'])
-        # new_camera_matrix = np.concatenate(
-        #     (new_scale_rotation_matrix, new_trans.reshape(-1,1)), axis=1
-        # )
-        # new_dense_camera_matrix = new_camera_matrix.reshape((12,1))
-        # params[:12] = new_dense_camera_matrix
-
-        # utils.show_pts(rotated_img, rotated_vertices[self.bfm.kpt_ind])
         rotated_img = (rotated_img*255).astype(np.uint8)
-
-        for idx in range(len(foo)-1):
-            print(foo[idx+1]-foo[idx])
 
         return rotated_img, params
 
@@ -299,11 +272,79 @@ class FaceModel:
         if preprocess:
             img, pt = self._preprocess_face_landmarks(img, pt, expand_ratio=expand_ratio, shape=shape)
         
-        tddfa_params = self.get_3DDFA_params(img, pt)
+        params, _ = self.get_3DDFA_params(img, pt)
         roi_box = utils.get_landmarks_wrapbox(pt)
 
-        return img, {'params': tddfa_params, 'roi_box': roi_box}
+        return img, {'params': params, 'roi_box': roi_box}
     
+    def generate_3ddfa_params_plus(self, 
+                                img, 
+                                pt, 
+                                preprocess=True, 
+                                expand_ratio=1., 
+                                shape=(128,128), 
+                                horizontal=[-30, -15, 0, 15, 30],
+                                vertical=[-40, -20, 20, 40]):
+        cart = []
+
+        if preprocess:
+            img, pt = self._preprocess_face_landmarks(img, pt, expand_ratio=expand_ratio, shape=shape)
+        
+        params, extra = self.get_3DDFA_params(img, pt)
+
+        roi_box = utils.get_landmarks_wrapbox(pt)
+
+        cart.append((img, {'params': params, 'roi_box': roi_box}))
+
+        angles = extra['angles']
+        if np.abs(angles[0]) > 10:
+            vertical = [0]
+        elif np.abs(angles[1]) > 10:
+            horizontal = [0]
+        else:
+            return cart
+
+        vertices = self.reconstruct_vertex(img, params, de_normalize=False)
+        colors = _get_colors(img, vertices.astype(int))
+
+        h,w,_ = img.shape
+        vertices.T[1] = h - 1 - vertices.T[1]
+        vertices.T[0] -= w/2
+        vertices.T[1] -= h/2
+
+        colors = colors/np.max(colors)
+        vertices = vertices - np.mean(vertices, 0)[np.newaxis, :]
+
+        obj = {}
+        camera = {}
+
+        camera['proj_type'] = 'orthographic'
+        obj['vertices'] = vertices
+        obj['colors'] = colors
+        obj['scale'] = np.float32(1)
+        obj['angles'] = [np.random.choice(vertical), np.random.choice(horizontal), 0]
+        obj['trans'] = [0,0,0]
+
+        rotated_img, rotated_vertices = self._transform_test(obj, camera, h, w)
+        rotated_vertices = rotated_vertices[self.bfm.kpt_ind][:,:2]
+        rotated_roi_box = utils.get_landmarks_wrapbox(rotated_vertices)
+
+        rotated_params, _ = self.get_3DDFA_params(
+            rotated_img, rotated_vertices
+        )
+
+        rotated_img = (rotated_img*255).astype(np.uint8)
+        blended_img = utils.blend_smooth_image(
+                rotated_img,
+                random.choice(BACKGROUND)
+        )
+
+        cart.append((blended_img, {'params': rotated_params, 'roi_box': rotated_roi_box}))
+
+        utils.draw_landmarks(rotated_img, rotated_vertices)
+
+        return cart
+
     def generate_sample(self, height, width, params, background=None):
         """
         Generate face sample from 3DDFA parameters.

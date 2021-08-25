@@ -37,17 +37,25 @@ if __name__=='__main__':
 
         fliplr_img, fliplr_pts = utils.fliplr_face_landmarks(img, pts)
 
-        img, params = model.generate_3ddfa_params(img, pts, expand_ratio=1.)
-        img_out_path = os.path.join(f'300VW-3D_cropped_closed_eyes_3ddfa/{folder_name}', f'{img_name}.jpg')
-        params_out_path = os.path.join(f'300VW-3D_cropped_closed_eyes_3ddfa/{folder_name}', f'{img_name}.mat')
-        cv2.imwrite(img_out_path, img)
-        sio.savemat(params_out_path, params)
+        output = model.generate_3ddfa_params_plus(img, pts, expand_ratio=1., preprocess=False)
+        for idx in range(len(output)):
+            img = output[idx][0]
+            params = output[idx][1]
 
-        fliplr_img, fliplr_params = model.generate_3ddfa_params(fliplr_img, fliplr_pts, expand_ratio=1.)
-        fliplr_img_out_path = os.path.join(f'300VW-3D_cropped_closed_eyes_3ddfa/{folder_name}', f'{img_name}_fliplr.jpg')
-        fliplr_params_out_path = os.path.join(f'300VW-3D_cropped_closed_eyes_3ddfa/{folder_name}', f'{img_name}_fliplr.mat')
-        cv2.imwrite(fliplr_img_out_path, fliplr_img)
-        sio.savemat(fliplr_params_out_path, fliplr_params)
+            img_out_path = os.path.join(f'300VW-3D_cropped_closed_eyes_3ddfa/{folder_name}', f'{img_name}_{idx}.jpg')
+            params_out_path = os.path.join(f'300VW-3D_cropped_closed_eyes_3ddfa/{folder_name}', f'{img_name}_{idx}.mat')
+            cv2.imwrite(img_out_path, img)
+            sio.savemat(params_out_path, params)
+
+        fliplr_output = model.generate_3ddfa_params_plus(fliplr_img, fliplr_pts, expand_ratio=1., preprocess=False)
+        for idx in range(len(fliplr_output)):
+            fliplr_img = fliplr_output[idx][0]
+            fliplr_params = fliplr_output[idx][1]
+
+            fliplr_img_out_path = os.path.join(f'300VW-3D_cropped_closed_eyes_3ddfa/{folder_name}', f'{img_name}_{idx}_fliplr.jpg')
+            fliplr_params_out_path = os.path.join(f'300VW-3D_cropped_closed_eyes_3ddfa/{folder_name}', f'{img_name}_{idx}_fliplr.mat')
+            cv2.imwrite(fliplr_img_out_path, fliplr_img)
+            sio.savemat(fliplr_params_out_path, fliplr_params)
 
     for item in tqdm.tqdm(bag):
         task(item)
