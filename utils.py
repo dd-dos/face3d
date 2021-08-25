@@ -178,11 +178,12 @@ def fliplr_face_landmarks(img, pts):
         :img: input image.
         :pts: np.array landmarks of shape (68,-1) 
     """
-    flip_img = cv2.flip(img, 1)
+    flip_img = cv2.flip(img.copy(), 1)
+    flip_pts = pts.copy()
     width = img.shape[1]
-    pts.T[0] = width - pts.T[0]
+    flip_pts.T[0] = width - flip_pts.T[0]
 
-    return flip_img, pts
+    return flip_img, flip_pts
 
 
 def affine_trans(image,landmarks,angle=None):
@@ -289,7 +290,7 @@ def extract_66_from_68(pts):
 
 
 @numba.njit()
-def crop_face_landmarks(img, pts_2D, landmarks, expand_ratio=1.0):
+def crop_multi_face_landmarks(img, pts_2d, landmarks, expand_ratio=1.0):
     """
     Pad and crop to retain landmarks when rotating.
 
@@ -300,24 +301,27 @@ def crop_face_landmarks(img, pts_2D, landmarks, expand_ratio=1.0):
     # Get the box that wrap all landmarks.
     # box_top, box_left, box_bot, box_right = \
     # get_landmarks_wrapbox(landmarks)
-    box_left = int(np.ceil(np.min(landmarks.T[0])))
-    box_right = int(np.ceil(np.max(landmarks.T[0])))
-    box_top = int(np.ceil(np.min(landmarks.T[1])))
-    box_bot = int(np.ceil(np.max(landmarks.T[1])))
+    box_left = np.min(landmarks.T[0])
+    box_right = np.max(landmarks.T[0])
+    box_top = np.min(landmarks.T[1])
+    box_bot = np.max(landmarks.T[1])
 
-    box_height = box_bot-box_top
-    box_width = box_right-box_left
-    
     # Crop image to get the largest square region that satisfied:
     # 1. Contains all landmarks
     # 2. Center of the landmarks box is the center of the region.
-    center = [int(np.ceil((box_left+box_right)/2)), int(np.ceil((box_top+box_bot)/2))]
+    center = [(box_left+box_right)/2, (box_top+box_bot)/2]
     
     # Get the diameter of largest region 
     # that a landmark can reach when rotating.
-    max_length = int(np.ceil(np.sqrt(np.power(box_height,2)+np.power(box_width,2))))
+    box_height = box_bot-box_top
+    box_width = box_right-box_left
+    radius = max(box_height, box_width) / 2
+    bbox = [center[0] - radius, center[1] - radius, center[0] + radius, center[1] + radius]
+    center_x = (bbox[2] + bbox[0]) / 2
+    center_y = (bbox[3] + bbox[1]) / 2
 
     # Crop a bit larger.
+    max_length = np.sqrt((bbox[2] - bbox[0]) ** 2 + (bbox[3] - bbox[1]) ** 2)
     crop_size = int(max_length/2 * expand_ratio)
 
     img_height, img_width, channel = img.shape
@@ -325,14 +329,14 @@ def crop_face_landmarks(img, pts_2D, landmarks, expand_ratio=1.0):
     canvas[crop_size:img_height+crop_size, crop_size:img_width+crop_size, :] = img
 
     # Adjust center coord.
-    center[0] += crop_size
-    center[1] += crop_size
+    center_x += crop_size
+    center_y += crop_size
 
     # Top left bottom right.
-    y1 = center[1]-int(crop_size)
-    x1 = center[0]-int(crop_size)
-    y2 = center[1]+int(crop_size)
-    x2 = center[0]+int(crop_size)
+    y1 = center_y-int(crop_size)
+    x1 = center_x-int(crop_size)
+    y2 = center_y+int(crop_size)
+    x2 = center_x+int(crop_size)
 
     # Crop image.
     img = canvas[y1:y2, x1:x2]
@@ -341,13 +345,13 @@ def crop_face_landmarks(img, pts_2D, landmarks, expand_ratio=1.0):
     landmarks.T[0] = landmarks.T[0] - x1 + crop_size
     landmarks.T[1] = landmarks.T[1] - y1 + crop_size
 
-    pts_2D.T[0] += crop_size - x1
-    pts_2D.T[1] += crop_size - y1
+    pts_2d.T[0] += crop_size - x1
+    pts_2d.T[1] += crop_size - y1
  
-    return img, pts_2D, landmarks
+    return img, pts_2d, landmarks
 
 import sympy
-def close_eyes_68(pts):
+def close_eyes_68_ver_1(pts):
     '''
     Simple version.
     '''
@@ -372,21 +376,50 @@ def close_eyes_68(pts):
     pt_45 = sympy.Point(pts[45])
     left_axis = sympy.geometry.Line(pt_42, pt_45)
 
-    new_pt_37 = right_axis.projection(pt_37)
-    new_pt_38 = right_axis.projection(pt_38)
+    projected_pt_37 = right_axis.projection(pt_37)
+    projected_pt_38 = right_axis.projection(pt_38)
 
-    new_pt_43 = left_axis.projection(pt_43)
-    new_pt_44 = left_axis.projection(pt_44)
+    projected_pt_43 = left_axis.projection(pt_43)
+    projected_pt_44 = left_axis.projection(pt_44)
 
-    pts[37] = np.array(new_pt_37).astype(np.float32)
-    pts[38] = np.array(new_pt_38).astype(np.float32)
-    pts[43] = np.array(new_pt_43).astype(np.float32)
-    pts[44] = np.array(new_pt_44).astype(np.float32)
+    pts[41] = pts[37] = np.array(projected_pt_37).astype(np.float32)
+    pts[40] = pts[38] = np.array(projected_pt_38).astype(np.float32)
+    pts[47] = pts[43] = np.array(projected_pt_43).astype(np.float32)
+    pts[46] = pts[44] = np.array(projected_pt_44).astype(np.float32)
+    
+    '''
+    Move lower eyes up.
+    '''
+    # pt_41 = sympy.Point(pts[41])
+    # pt_40 = sympy.Point(pts[40])
+    # pt_47 = sympy.Point(pts[47])
+    # pt_46 = sympy.Point(pts[46])
+
+    # projected_pt_41 = right_axis.projection(pt_41)
+    # projected_pt_40 = right_axis.projection(pt_40)
+
+    # projected_pt_47 = left_axis.projection(pt_47)
+    # projected_pt_46 = left_axis.projection(pt_46)
+
+    # pts[41] = np.array(projected_pt_37).astype(np.float32)
+    # pts[40] = np.array(projected_pt_38).astype(np.float32)
+    # pts[47] = np.array(projected_pt_43).astype(np.float32)
+    # pts[46] = np.array(projected_pt_44).astype(np.float32)
 
     return pts
 
+def close_eyes_68_ver_2(pts):
+    '''
+    Simple version.
+    '''
+    pts[37] = pts[41] = pts[37] + (pts[41] - pts[37])*3/4
+    pts[38] = pts[40] = pts[38] + (pts[40] - pts[38])*3/4
+    pts[43] = pts[47] = pts[43] + (pts[47] - pts[43])*3/4
+    pts[44] = pts[46] = pts[44] + (pts[46] - pts[44])*3/4
 
-def resize_face_landmarks(img, pts_2D, landmarks, shape=(256,256)):
+    return pts
+
+def resize_face_landmarks(img, pts_2d, landmarks, shape=(256,256)):
     height, width, _ = img.shape
 
     width_ratio = shape[0] / width
@@ -398,12 +431,13 @@ def resize_face_landmarks(img, pts_2D, landmarks, shape=(256,256)):
     # landmarks.T[1] = landmarks.T[1]*height_ratio
 
     landmarks *= np.array([width_ratio, height_ratio])
-    pts_2D *= np.array([width_ratio, height_ratio])
+    pts_2d *= np.array([width_ratio, height_ratio])
 
-    return img, pts_2D, landmarks
+    return img, pts_2d, landmarks
 
-
-def check_close_eye(eye, threshold=0.1):
+MAX = 0.
+def check_close_eye(eye, threshold=0.15):
+    global MAX
     p2_minus_p6 = np.linalg.norm(eye[1] - eye[5])
     p3_minus_p5 = np.linalg.norm(eye[2] - eye[4])
     p1_minus_p4 = np.linalg.norm(eye[0] - eye[3])
@@ -413,6 +447,9 @@ def check_close_eye(eye, threshold=0.1):
         print(ear)
         return True
     else:
+        if ear >= MAX:
+            MAX = ear
+            print(MAX)
         return False
 
 def get_eyes(pts):
@@ -424,19 +461,26 @@ def get_eyes(pts):
         'right': right
     }
 
-def replace_eyes(pts_2D, pts_3D):
-    pts_3D[37] = pts_2D[37]
-    pts_3D[41] = pts_2D[41]
-    pts_3D[38] = pts_2D[38]
-    pts_3D[40] = pts_2D[40]
-    pts_3D[43] = pts_2D[43]
-    pts_3D[47] = pts_2D[47]
-    pts_3D[44] = pts_2D[44]
-    pts_3D[46] = pts_2D[46]
+def replace_eyes(pts_2d, pts_3D):
+    pts_3D[37] = pts_2d[37]
+    pts_3D[41] = pts_2d[41]
+    pts_3D[38] = pts_2d[38]
+    pts_3D[40] = pts_2d[40]
+    pts_3D[43] = pts_2d[43]
+    pts_3D[47] = pts_2d[47]
+    pts_3D[44] = pts_2d[44]
+    pts_3D[46] = pts_2d[46]
 
-    pts_3D[36] = pts_2D[36]
-    pts_3D[39] = pts_2D[39]
-    pts_3D[42] = pts_2D[42]
-    pts_3D[45] = pts_2D[45]
+    pts_3D[36] = pts_2d[36]
+    pts_3D[39] = pts_2d[39]
+    pts_3D[42] = pts_2d[42]
+    pts_3D[45] = pts_2d[45]
 
     return pts_3D
+
+def draw_pts(img, pts):
+    foo_img = img.copy()
+    for pt in pts:
+        pt = pt.astype(int)
+        foo_img = cv2.circle(foo_img, pt,2,(0,255,0), -1, 8)
+    cv2.imwrite(f'foo.jpg', foo_img)

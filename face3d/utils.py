@@ -9,6 +9,7 @@ import numba
 import numpy as np
 import PIL
 import scipy.io as sio
+from sympy.core.numbers import I
 import torchfile
 import tqdm
 from PIL import Image, ImageFilter, ImageOps
@@ -87,7 +88,7 @@ def show_pts(img, pts):
     Image.fromarray(_img).show()
 
 
-@numba.njit()
+# @numba.njit()
 def crop_face_landmarks(img, landmarks, expand_ratio=1.0):
     """
     Pad and crop to retain landmarks when rotating.
@@ -115,8 +116,8 @@ def crop_face_landmarks(img, landmarks, expand_ratio=1.0):
     box_width = box_right-box_left
     radius = max(box_height, box_width) / 2
     bbox = [center[0] - radius, center[1] - radius, center[0] + radius, center[1] + radius]
-    center_x = (bbox[2] + bbox[0]) / 2
-    center_y = (bbox[3] + bbox[1]) / 2    
+    center_x = int((bbox[2] + bbox[0]) / 2)
+    center_y = int((bbox[3] + bbox[1]) / 2)
 
     # Crop a bit larger.
     max_length = np.sqrt((bbox[2] - bbox[0]) ** 2 + (bbox[3] - bbox[1]) ** 2)
@@ -131,10 +132,10 @@ def crop_face_landmarks(img, landmarks, expand_ratio=1.0):
     center_y += crop_size
 
     # Top left bottom right.
-    y1 = center_y-int(crop_size)
-    x1 = center_x-int(crop_size)
-    y2 = center_y+int(crop_size)
-    x2 = center_x+int(crop_size)
+    y1 = center_y-crop_size
+    x1 = center_x-crop_size
+    y2 = center_y+crop_size
+    x2 = center_x+crop_size
 
     # Crop image.
     img = canvas[y1:y2, x1:x2]

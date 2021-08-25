@@ -58,7 +58,7 @@ class FaceModel:
         )
         return shp, exp, scale, angles, trans
 
-    def _preprocess_face_landmarks(self, img, pt, expand_ratio=1.5, shape=(128,128)):
+    def _preprocess_face_landmarks(self, img, pt, expand_ratio=1., shape=(128,128)):
         """
         Crop then resize image and landmarks to target shape.
 
@@ -275,25 +275,12 @@ class FaceModel:
         else:
             return r_img, params
 
-    def generate_3ddfa_params(self, img, pt, preprocess=True, expand_ratio=1.1, shape=(128,128)):
+    def generate_3ddfa_params(self, img, pt, preprocess=True, expand_ratio=1., shape=(128,128)):
         if preprocess:
             img, pt = self._preprocess_face_landmarks(img, pt, expand_ratio=expand_ratio, shape=shape)
         
         tddfa_params = self.get_3DDFA_params(img, pt)
         roi_box = utils.get_landmarks_wrapbox(pt)
-
-        vertex = self.reconstruct_vertex(
-            img, 
-            tddfa_params.reshape(-1,),
-            de_normalize=False
-        )[self.bfm.kpt_ind]
-        box_left = np.min(vertex.T[0])
-        box_right = np.max(vertex.T[0])
-        box_top = np.min(vertex.T[1])
-        box_bot = np.max(vertex.T[1])
-        print([(box_left+box_right)/2, (box_top+box_bot)/2])
-        utils.show_pts(img, vertex)
-        import ipdb; ipdb.set_trace(context=10)
 
         return img, {'params': tddfa_params, 'roi_box': roi_box}
     
