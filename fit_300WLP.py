@@ -1,6 +1,8 @@
 import os
 import multiprocessing as mp
 from pathlib import Path
+
+from numba.core.utils import format_time
 from face3d.face_model import FaceModel
 import tqdm
 import cv2
@@ -8,9 +10,11 @@ import scipy.io as sio
 import glob
 import numpy as np
 import utils
-
+from utils import draw_pts
+import shutil
 
 if __name__=='__main__':
+    shutil.rmtree('300WLP_3ddfa', ignore_errors=True)
     os.makedirs('300WLP_3ddfa', exist_ok=True)
     os.makedirs('300WLP_3ddfa/300WLP_3ddfa-verified', exist_ok=True)
 
@@ -35,13 +39,19 @@ if __name__=='__main__':
         params_out_path = os.path.join('300WLP_3ddfa/300WLP_3ddfa-verified', f'{name}.mat')
         cv2.imwrite(img_out_path, img)
         sio.savemat(params_out_path, params)
-
+        
         fliplr_img, fliplr_params = model.generate_3ddfa_params(fliplr_img, fliplr_pts, expand_ratio=1.)
         fliplr_img_out_path = os.path.join('300WLP_3ddfa/300WLP_3ddfa-verified', f'{name}_fliplr.jpg')
         fliplr_params_out_path = os.path.join('300WLP_3ddfa/300WLP_3ddfa-verified', f'{name}_fliplr.mat')
         cv2.imwrite(fliplr_img_out_path, fliplr_img)
         sio.savemat(fliplr_params_out_path, fliplr_params)
 
+        # foo_pts = model.reconstruct_vertex(fliplr_img, fliplr_params['params'], de_normalize=False)[:,:2][model.bfm.kpt_ind]
+        # for pts in foo_pts:
+        #     pts = pts.astype(int)
+        #     fliplr_img = cv2.circle(fliplr_img, pts,2,(0,255,0), -1, 8)
+        # cv2.imwrite(f'test_images.jpg', fliplr_img)
+            
         # cv2.imshow('', img)
         # cv2.waitKey(0)
         # cv2.destroyAllWindows()
