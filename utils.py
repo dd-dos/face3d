@@ -2,6 +2,7 @@ import os
 import sys
 import time
 import ipdb
+from sympy.testing.runtests import SymPyTestResults
 import torch
 import math
 import numpy as np
@@ -330,12 +331,42 @@ def crop_face_landmarks(img, pts_2D, landmarks, expand_ratio=1.0):
  
     return img, pts_2D, landmarks
 
-
+import sympy
 def close_eyes_68(pts):
-    pts[37] = pts[41]
-    pts[38] = pts[40]
-    pts[43] = pts[47]
-    pts[44] = pts[46]
+    '''
+    Simple version.
+    '''
+    # pts[37] = pts[41]
+    # pts[38] = pts[40]
+    # pts[43] = pts[47]
+    # pts[44] = pts[46]
+
+    '''
+    More complex version.
+    '''
+    pt_37 = sympy.Point(pts[37])
+    pt_38 = sympy.Point(pts[38])
+    pt_43 = sympy.Point(pts[43])
+    pt_44 = sympy.Point(pts[44])
+
+    pt_36 = sympy.Point(pts[36])
+    pt_39 = sympy.Point(pts[39])
+    right_axis = sympy.geometry.Line(pt_36, pt_39)
+
+    pt_42 = sympy.Point(pts[42])
+    pt_45 = sympy.Point(pts[45])
+    left_axis = sympy.geometry.Line(pt_42, pt_45)
+
+    new_pt_37 = right_axis.projection(pt_37)
+    new_pt_38 = right_axis.projection(pt_38)
+
+    new_pt_43 = left_axis.projection(pt_43)
+    new_pt_44 = left_axis.projection(pt_44)
+
+    pts[37] = np.array(new_pt_37).astype(np.float32)
+    pts[38] = np.array(new_pt_38).astype(np.float32)
+    pts[43] = np.array(new_pt_43).astype(np.float32)
+    pts[44] = np.array(new_pt_44).astype(np.float32)
 
     return pts
 

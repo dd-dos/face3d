@@ -10,7 +10,7 @@ import face3d
 from face3d import mesh, utils
 from face3d.morphable_model import MorphabelModel
 from face3d.utils import (crop_face_landmarks, isgray, resize_face_landmarks,
-                          show_ndarray_img, show_pts, show_vertices)
+                          show_ndarray_img, show_pts, show_vertices, draw_landmarks)
 
 @numba.njit()
 def shift(img, params, shift_value=(-20,30)):
@@ -40,17 +40,18 @@ if __name__=='__main__':
     #     break
     from face3d import face_model
     model = face_model.FaceModel()
-    img = cv2.imread('examples/Data/300WLP-std_134212_1_0.jpg')
-    pt = sio.loadmat('examples/Data/300WLP-std_134212_1_0.mat')['pt3d']
+    img = cv2.imread('300VW-3D_cropped/001/0001.jpg')
+    pt = sio.loadmat('300VW-3D_cropped/001/0001.mat')['pt2D']
+    draw_landmarks(img, pt)
     # pt[37] = pt[41]
     # pt[38] = pt[40]
     # pt[43] = pt[47]
     # pt[44] = pt[46]
     
-    img, params = model.generate_3ddfa_params(img, pt, expand_ratio=0.95)
-    params = params['params'].reshape(101,)
+    # img, params = model.generate_3ddfa_params(img, pt, expand_ratio=0.95)
+    # params = params['params'].reshape(101,)
     # img, params = shift(img, params)
-    new_pt = model.reconstruct_vertex(img, params)
+    # new_pt = model.reconstruct_vertex(img, params)
     # img = cv2.imread('AFLW2000/image01649.jpg')
     # pt = sio.loadmat('AFLW2000/image01649.mat')['pt3d_68'][:2].T
     # img, params = model.generate_rotated_3d_img(img, pt)
@@ -59,7 +60,7 @@ if __name__=='__main__':
     # params[11] = 100000
     # pt = model.reconstruct_vertex(img, params)
     # show_vertices(new_pt[model.bfm.kpt_ind], '2D')
-    show_pts(img, new_pt[model.bfm.kpt_ind])
+    # show_pts(img, pt)
 
     ################################################################################
 
