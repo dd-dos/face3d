@@ -373,7 +373,7 @@ def blend_smooth_image(image, background, xy=(0,0), wh=None, iterations=None, sm
     w, h = image.size
     background = background.resize((w,h))
 
-    image = create_transparent_image(image, threshold=50, mode='lower', get_full_object=True)
+    image = create_transparent_image(image, threshold=5, mode='lower', get_full_object=True)
 
     left, top = xy
     if brightness_matching:

@@ -7,9 +7,10 @@ import cv2
 import scipy.io as sio
 import glob
 import numpy as np
-
+import shutil
 
 if __name__=='__main__':
+    shutil.rmtree('AFLW2000_3ddfa', ignore_errors=True)
     os.makedirs('AFLW2000_3ddfa', exist_ok=True)
 
     model = FaceModel()

@@ -1,3 +1,4 @@
+from cv2 import imwrite
 from face3d.mesh.transform import rotate
 from . import morphable_model
 from . import utils
@@ -57,6 +58,7 @@ class FaceModel:
         shp, exp, scale, angles, trans = self.bfm.reduced_fit(
             pt, n_sp=self.n_shape, n_ep=self.n_exp, max_iter=3
         )
+
         return shp, exp, scale, angles, trans
 
     def _preprocess_face_landmarks(self, img, pt, expand_ratio=1., shape=(128,128)):
@@ -237,21 +239,6 @@ class FaceModel:
 
         return rotated_img, params
 
-    def foo(self, img, pt):
-        # img, pt = self._preprocess_face_landmarks(img, pt, shape=(256,256))
-        # params = self.get_3DDFA_params(img, pt)
-        # re_pt = self.reconstruct_vertex(img, params)
-
-        # utils.show_pts(img, re_pt[self.bfm.kpt_ind])
-        import time
-        t0 = time.time()
-        img, pt = self._preprocess_face_landmarks(img, pt, shape=(256,256))
-        r_img, params = self.augment_rotate(img, pt)
-        print(time.time()-t0)
-
-        r_pt = self.reconstruct_vertex(r_img, params)
-        utils.show_pts(r_img, r_pt[self.bfm.kpt_ind])
-    
     def generate_rotated_3d_img(self, img, pt, angles=None, blended=False, shape=(128,128)):
         img, pt = self._preprocess_face_landmarks(img, pt, shape=shape)
         r_img, params = self.augment_rotate(img, pt, angles=angles)
@@ -283,8 +270,8 @@ class FaceModel:
                                 preprocess=True, 
                                 expand_ratio=1., 
                                 shape=(128,128), 
-                                horizontal=[-30, -15, 0, 15, 30],
-                                vertical=[-40, -20, 20, 40]):
+                                horizontal=[-30, -20, 0, 20, 30],
+                                vertical=[-40, -30, 20]):
         cart = []
 
         if preprocess:
@@ -297,12 +284,13 @@ class FaceModel:
         cart.append((img, {'params': params, 'roi_box': roi_box}))
 
         angles = extra['angles']
-        if np.abs(angles[0]) > 10:
-            vertical = [0]
+
+        if np.abs(angles[0]) > 10 and np.abs(angles[1]) > 10:
+            return cart
         elif np.abs(angles[1]) > 10:
             horizontal = [0]
-        else:
-            return cart
+        elif np.abs(angles[1]) > 10:
+            vertical = [0]
 
         vertices = self.reconstruct_vertex(img, params, de_normalize=False)
         colors = _get_colors(img, vertices.astype(int))
@@ -328,7 +316,6 @@ class FaceModel:
         rotated_img, rotated_vertices = self._transform_test(obj, camera, h, w)
         rotated_vertices = rotated_vertices[self.bfm.kpt_ind][:,:2]
         rotated_roi_box = utils.get_landmarks_wrapbox(rotated_vertices)
-
         rotated_params, _ = self.get_3DDFA_params(
             rotated_img, rotated_vertices
         )
@@ -340,9 +327,7 @@ class FaceModel:
         )
 
         cart.append((blended_img, {'params': rotated_params, 'roi_box': rotated_roi_box}))
-
-        utils.draw_landmarks(rotated_img, rotated_vertices)
-
+        
         return cart
 
     def generate_sample(self, height, width, params, background=None):

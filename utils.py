@@ -170,7 +170,7 @@ def flip_ImAndPts(image,landmarks):
     return flipImg,flipLnd
 
 
-def fliplr_face_landmarks(img, pts):
+def fliplr_face_landmarks(img, pts, reverse=True):
     """
     Flip left right image and landmarks.
 
@@ -178,12 +178,28 @@ def fliplr_face_landmarks(img, pts):
         :img: input image.
         :pts: np.array landmarks of shape (68,-1) 
     """
-    flip_img = cv2.flip(img.copy(), 1)
-    flip_pts = pts.copy()
-    width = img.shape[1]
-    flip_pts.T[0] = width - flip_pts.T[0]
 
-    return flip_img, flip_pts
+    '''
+    Return points to orginal status.
+    '''
+    width, height = img.shape[:2]
+    if reverse:
+        pts.T[0] += width/2
+        pts.T[1] += height/2
+        pts.T[1] = height - 1 - pts.T[1]
+
+    pts.T[0] = width - pts.T[0]
+
+    matchedParts = ([0, 16], [1, 15], [2, 14], [3, 13], [4, 12], [5, 11], [6, 10], [7, 9],
+                    [17, 26], [18, 25], [19, 24], [20, 23], [21, 22], [36, 45], [37, 44],
+                    [38, 43], [39, 42], [41, 46], [40, 47], [31, 35], [32, 34], [50, 52],
+                    [49, 53], [48, 54], [61, 63], [67, 65], [59, 55], [58, 56], [60,64])
+
+    # Change left-right parts
+    for pair in matchedParts:
+        pts[pair] = pts[[pair[1], pair[0]]]
+
+    return cv2.flip(img, 1), pts
 
 
 def affine_trans(image,landmarks,angle=None):
@@ -434,23 +450,6 @@ def resize_face_landmarks(img, pts_2d, landmarks, shape=(256,256)):
     pts_2d *= np.array([width_ratio, height_ratio])
 
     return img, pts_2d, landmarks
-
-MAX = 0.
-def check_close_eye(eye, threshold=0.15):
-    global MAX
-    p2_minus_p6 = np.linalg.norm(eye[1] - eye[5])
-    p3_minus_p5 = np.linalg.norm(eye[2] - eye[4])
-    p1_minus_p4 = np.linalg.norm(eye[0] - eye[3])
-    ear = (p2_minus_p6 + p3_minus_p5) / (2.0 * p1_minus_p4)
-
-    if ear <= threshold:
-        print(ear)
-        return True
-    else:
-        if ear >= MAX:
-            MAX = ear
-            print(MAX)
-        return False
 
 def get_eyes(pts):
     right = pts[36:42]
