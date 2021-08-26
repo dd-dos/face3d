@@ -1,5 +1,3 @@
-from cv2 import imwrite
-from face3d.mesh.transform import rotate
 from . import morphable_model
 from . import utils
 from . import mesh
