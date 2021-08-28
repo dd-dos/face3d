@@ -270,7 +270,7 @@ class FaceModel:
                                 expand_ratio=1., 
                                 shape=(128,128), 
                                 horizontal=[-30, -20, 0, 20, 30],
-                                vertical=[-40, -30, 20]):
+                                vertical=[-30, 30]):
         cart = []
 
         if preprocess:
