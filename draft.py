@@ -6,10 +6,10 @@ import numba
 import numpy as np
 import scipy.io as sio
 
-from face3d import face_model, mesh, utils
-from face3d.morphable_model import MorphabelModel
+from face3d import face_model, mesh
 from face3d.utils import (crop_face_landmarks, isgray, resize_face_landmarks,
                           show_ndarray_img, show_pts, show_vertices, draw_landmarks)
+import utils
 
 model = face_model.FaceModel()
 
@@ -60,10 +60,15 @@ def generated_rotated_sample(height,
 if __name__=='__main__':
     # img, vertex = model._preprocess_face_landmarks(img, vertex)
     # rimg, _ = model.augment_rotate(img, vertex, [-70,0,0], base_size=180*0.7, de_normalize=False)
-    img = cv2.imread('0385.jpg')
-    vertex = sio.loadmat('0385.mat')['pt3d']
+    img = cv2.imread('samples/053_error/1194.jpg')
+    vertex_3d = sio.loadmat('samples/053_error/1194.mat')['pt3d']
+
+    # vertex_2d = sio.loadmat('samples/001_original/0575.mat')['pt2d']
+    # vertex_3d = utils.replace_eyes(vertex_2d, vertex_3d)
+    show_pts(img.copy(), vertex_3d.copy(), 'BGR')
+
     output = model.generate_3ddfa_params_plus(
-        img, vertex, preprocess=False, horizontal=[0], vertical=[0])
+        img, vertex_3d, preprocess=False, horizontal=[0], vertical=[0])
     
     for out in output:
         rimg = out[0]

@@ -322,7 +322,8 @@ class FaceModel:
         rotated_img = (rotated_img*255).astype(np.uint8)
         blended_img = utils.blend_smooth_image(
                 rotated_img,
-                random.choice(BACKGROUND)
+                random.choice(BACKGROUND),
+                brightness_matching=False
         )
 
         cart.append((blended_img, {'params': rotated_params, 'roi_box': rotated_roi_box}))
