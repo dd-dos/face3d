@@ -1,4 +1,3 @@
-from utils import draw_pts
 from . import morphable_model
 from . import utils
 from . import mesh
