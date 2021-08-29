@@ -50,4 +50,4 @@ for file_path in tqdm.tqdm(file_list, total=len(file_list)):
     params = sio.loadmat(file_path)['params']
     rs.push(params)
 
-sio.savemat('params_mean_std_12_pose_60_shp_29_exp.mat', {'mean': rs.mean(), 'std': rs.standard_deviation()})
+sio.savemat('face3d/morphable_model/BFM/params_mean_std_12_pose_60_shp_29_exp.mat', {'mean': rs.mean(), 'std': rs.standard_deviation()})
