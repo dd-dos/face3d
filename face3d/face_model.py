@@ -6,6 +6,7 @@ import numba
 import glob
 import os 
 import random
+import cv2
 BACKGROUND = list(glob.glob('examples/Data/background/*'))
 
 @numba.njit()
@@ -259,6 +260,38 @@ class FaceModel:
             img, pt = self._preprocess_face_landmarks(img, pt, expand_ratio=expand_ratio, shape=shape)
         
         params, _ = self.get_3DDFA_params(img, pt)
+        roi_box = utils.get_landmarks_wrapbox(pt)
+
+        return img, {'params': params, 'roi_box': roi_box}
+    
+    def generate_3ddfa_resize_params(self, img, pt, preprocess=True, expand_ratio=1., base_shape=(128,128), target_shape=(256,256)):
+        if preprocess:
+            img, pt = self._preprocess_face_landmarks(img, pt, expand_ratio=expand_ratio, shape=base_shape)
+        
+        img = cv2.resize(img, (target_shape))
+
+        shp, exp, scale, angles, trans = self._get_params(img, pt)
+
+        trans = trans + np.array([128*(np.sqrt(2)-1), -128*(np.sqrt(2)-1), 0])
+        scale = scale * 2
+
+        rotation_matrix = mesh.transform.angle2matrix(angles)
+        scale_rotation_matrix = scale * rotation_matrix
+        camera_matrix = np.concatenate(
+            (scale_rotation_matrix, trans.reshape(-1,1)), axis=1
+        )
+        dense_camera_matrix = camera_matrix.reshape((12,1))
+        params = np.concatenate((dense_camera_matrix, shp, exp), axis=0)
+        
+        extra = {
+            'shp': shp,
+            'exp': exp,
+            'scale': scale,
+            'angles': angles,
+            'trans': trans,
+        }
+
+        params = params.reshape(-1,)
         roi_box = utils.get_landmarks_wrapbox(pt)
 
         return img, {'params': params, 'roi_box': roi_box}

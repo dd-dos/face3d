@@ -1,5 +1,6 @@
 from PIL.Image import new
 from matplotlib.pyplot import show
+import face3d
 from face3d.mesh import render, transform
 import cv2
 import numba
@@ -60,18 +61,38 @@ def generated_rotated_sample(height,
 if __name__=='__main__':
     # img, vertex = model._preprocess_face_landmarks(img, vertex)
     # rimg, _ = model.augment_rotate(img, vertex, [-70,0,0], base_size=180*0.7, de_normalize=False)
-    img = cv2.imread('samples/053_error/1194.jpg')
-    vertex_3d = sio.loadmat('samples/053_error/1194.mat')['pt3d']
+    # img = cv2.imread('samples/003/1785_0.jpg')
+    # vertex_3d = sio.loadmat('samples/0544.mat')['pt3d']
 
-    # vertex_2d = sio.loadmat('samples/001_original/0575.mat')['pt2d']
-    # vertex_3d = utils.replace_eyes(vertex_2d, vertex_3d)
-    show_pts(img.copy(), vertex_3d.copy(), 'BGR')
+    # # vertex_2d = sio.loadmat('samples/001_original/0575.mat')['pt2d']
+    # # vertex_3d = utils.replace_eyes(vertex_2d, vertex_3d)
+    # # show_pts(img.copy(), vertex_3d.copy(), 'BGR')
 
-    output = model.generate_3ddfa_params_plus(
-        img, vertex_3d, preprocess=False, horizontal=[0], vertical=[0])
+    # output = model.generate_3ddfa_params_plus(
+    #     img, vertex_3d, preprocess=False, horizontal=[0], vertical=[0])
+
+    # for out in output:
+    #     rimg = out[0]
+    #     params = out[1]['params']
+    #     vertex = model.reconstruct_vertex(rimg, params, False)[model.bfm.kpt_ind]
+    #     show_pts(rimg, vertex, 'BGR')
     
-    for out in output:
-        rimg = out[0]
-        params = out[1]['params']
-        vertex = model.reconstruct_vertex(rimg, params, False)[model.bfm.kpt_ind]
-        show_pts(rimg, vertex, 'BGR')
+    # params = sio.loadmat('samples/003/1785_0.mat')['params'].reshape(101,)
+    # vertex = model.reconstruct_vertex(img, params, False)[model.bfm.kpt_ind]
+    # show_pts(img, vertex, 'BGR')
+
+    img = cv2.imread('examples/Data/300WLP-std_134212_1_0.jpg')
+    pts = sio.loadmat('examples/Data/300WLP-std_134212_1_0.mat')['pt3d']
+    # img = cv2.copyMakeBorder(img, 0, 0, 300, 300, borderType=0)
+    # pts.T[0] += 300
+    # show_pts(img, pts, mode='BGR')
+
+    # img, pt = resize_face_landmarks(img, pts)
+    # show_pts(img, pts, mode='BGR')
+
+    img, params = model.generate_3ddfa_resize_params(img, pts)
+    # _,_,scale,angles,_ = model._parse_params(params['params'].copy(), de_normalize=False)
+    # print(f'scale: {scale} - angle: {angles}')
+
+    re_pts = model.reconstruct_vertex(img, params['params'], de_normalize=False)[:,:2][model.bfm.kpt_ind]
+    show_pts(img, re_pts, mode='BGR')
