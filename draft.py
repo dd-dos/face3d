@@ -1,6 +1,10 @@
 from PIL.Image import new
+<<<<<<< HEAD
 from matplotlib.pyplot import show
 import face3d
+=======
+from matplotlib.pyplot import draw, show
+>>>>>>> 96ef724472a1ed74a7867e1d97d3347bb3a7082b
 from face3d.mesh import render, transform
 import cv2
 import numba

@@ -1,9 +1,4 @@
-from face3d.utils import draw_landmarks
-import os
-import sys
-import time
-import ipdb
-from sympy.testing.runtests import SymPyTestResults
+from sympy.core.numbers import I
 import torch
 import math
 import numpy as np
@@ -11,6 +6,9 @@ import cv2
 import matplotlib.pyplot as plt
 from PIL import Image
 import numba
+import scipy.io as sio
+import sympy
+
 
 def process_image(image,points,angle=0, flip=False, sigma=1,size=128, tight=16):
     if angle > 0:
@@ -99,35 +97,8 @@ def generate_maps(points, sigma, size=256):
     return maps 
 
 
-def crop( image, landmarks , size, tight=8):
-    delta_x = np.max(landmarks[:,0]) - np.min(landmarks[:,0])
-    delta_y = np.max(landmarks[:,1]) - np.min(landmarks[:,1])
-    delta = 0.5*(delta_x + delta_y)
-    if delta < 20:
-        tight_aux = 8
-    else:
-        tight_aux = int(tight * delta/100)
-    pts_ = landmarks.copy()
-    w = image.shape[1]
-    h = image.shape[0]
-    min_x = int(np.maximum( np.round( np.min(landmarks[:,0]) ) - tight_aux , 0 ))
-    min_y = int(np.maximum( np.round( np.min(landmarks[:,1]) ) - tight_aux , 0 ))
-    max_x = int(np.minimum( np.round( np.max(landmarks[:,0]) ) + tight_aux , w-1 ))
-    max_y = int(np.minimum( np.round( np.max(landmarks[:,1]) ) + tight_aux , h-1 ))
-    image = image[min_y:max_y,min_x:max_x,:]
-    pts_[:,0] = pts_[:,0] - min_x
-    pts_[:,1] = pts_[:,1] - min_y
-    sw = size/image.shape[1]
-    sh = size/image.shape[0]
-    im = cv2.resize(image, dsize=(size,size),
-                    interpolation=cv2.INTER_LINEAR)
-    
-    pts_[:,0] = pts_[:,0]*sw
-    pts_[:,1] = pts_[:,1]*sh
-    return im, pts_
-
 @numba.njit()
-def reduced_crop(image, landmarks , size, tight=8):
+def reduced_crop(image, landmarks, pts_3d, size, tight=8):
     delta_x = np.max(landmarks[:,0]) - np.min(landmarks[:,0])
     delta_y = np.max(landmarks[:,1]) - np.min(landmarks[:,1])
     delta = 0.5*(delta_x + delta_y)
@@ -135,7 +106,7 @@ def reduced_crop(image, landmarks , size, tight=8):
         tight_aux = 8
     else:
         tight_aux = int(tight * delta/100)
-    pts_ = landmarks
+    pts_2d = landmarks
     w = image.shape[1]
     h = image.shape[0]
     min_x = int(np.maximum( np.round( np.min(landmarks[:,0]) ) - tight_aux , 0 ))
@@ -143,14 +114,22 @@ def reduced_crop(image, landmarks , size, tight=8):
     max_x = int(np.minimum( np.round( np.max(landmarks[:,0]) ) + tight_aux , w-1 ))
     max_y = int(np.minimum( np.round( np.max(landmarks[:,1]) ) + tight_aux , h-1 ))
     image = image[min_y:max_y,min_x:max_x,:]
-    pts_[:,0] = pts_[:,0] - min_x
-    pts_[:,1] = pts_[:,1] - min_y
+    pts_2d[:,0] = pts_2d[:,0] - min_x
+    pts_2d[:,1] = pts_2d[:,1] - min_y
+
+    pts_3d[:,0] = pts_3d[:,0] - min_x
+    pts_3d[:,1] = pts_3d[:,1] - min_y
+    
     sw = size/image.shape[1]
     sh = size/image.shape[0]
     
-    pts_[:,0] = pts_[:,0]*sw
-    pts_[:,1] = pts_[:,1]*sh
-    return pts_
+    pts_2d[:,0] = pts_2d[:,0]*sw
+    pts_2d[:,1] = pts_2d[:,1]*sh
+
+    pts_3d[:,0] = pts_3d[:,0]*sw
+    pts_3d[:,1] = pts_3d[:,1]*sh
+    
+    return pts_2d, pts_3d
 
 
 def generate_Ginput( img, target_pts , sigma , size=256 ):
@@ -169,38 +148,6 @@ def flip_ImAndPts(image,landmarks):
     flipLnd[:,0] = image.shape[1] - landmarks[pts_mirror,0]
     flipLnd[:,1] = landmarks[pts_mirror,1]
     return flipImg,flipLnd
-
-
-def fliplr_face_landmarks(img, pts, reverse=True):
-    """
-    Flip left right image and landmarks.
-
-    Args:
-        :img: input image.
-        :pts: np.array landmarks of shape (68,-1) 
-    """
-
-    '''
-    Return points to orginal status.
-    '''
-    height, width = img.shape[:2]
-    if reverse:
-        pts.T[0] += width/2
-        pts.T[1] += height/2
-        pts.T[1] = height - 1 - pts.T[1]
-
-    pts.T[0] = width - pts.T[0]
-
-    matchedParts = ([0, 16], [1, 15], [2, 14], [3, 13], [4, 12], [5, 11], [6, 10], [7, 9],
-                    [17, 26], [18, 25], [19, 24], [20, 23], [21, 22], [36, 45], [37, 44],
-                    [38, 43], [39, 42], [41, 46], [40, 47], [31, 35], [32, 34], [50, 52],
-                    [49, 53], [48, 54], [61, 63], [67, 65], [59, 55], [58, 56], [60,64])
-
-    # Change left-right parts
-    for pair in matchedParts:
-        pts[pair] = pts[[pair[1], pair[0]]]
-
-    return cv2.flip(img, 1), pts
 
 
 def affine_trans(image,landmarks,angle=None):
@@ -252,16 +199,13 @@ def show_pts(img, pts):
     try:
         for i in range(pts.shape[0]):
             _pts = pts[i].astype(int)
-            _img = cv2.circle(_img, (_pts[0], _pts[1]),2,(0,255,0), -1, 8)
+            _img = cv2.circle(_img, (_pts[0], _pts[1]),3,(0,255,0), -1, 8)
     except Exception as e:
         print(e)
         import ipdb; ipdb.set_trace(context=10)
     
-    # _img = cv2.cvtColor(_img, cv2.COLOR_BGR2RGB)
-    # Image.fromarray(_img).show()
-    cv2.imshow('', _img)
-    cv2.waitKey(0)
-    cv2.destroyAllWindows()
+    _img = cv2.cvtColor(_img, cv2.COLOR_BGR2RGB)
+    Image.fromarray(_img).show()
 
 
 def show_vertices(vertices: np.ndarray, v_type='3D'):
@@ -298,7 +242,12 @@ def show_vertices(vertices: np.ndarray, v_type='3D'):
 
 
 def read_pts(filename):
-    return np.loadtxt(filename, comments=("version:", "n_points:", "{", "}"))
+    if filename.endswith('.mat'):
+        return sio.loadmat(filename)
+    elif filename.endswith('pts'):
+        return np.loadtxt(filename, comments=("version:", "n_points:", "{", "}"))
+    else:
+        raise Exception('Unsupported file format')
 
 
 @numba.njit()
@@ -307,7 +256,7 @@ def extract_66_from_68(pts):
 
 
 @numba.njit()
-def crop_multi_face_landmarks(img, pts_2d, landmarks, expand_ratio=1.0):
+def crop_face_landmarks(img, landmarks, expand_ratio=1.0):
     """
     Pad and crop to retain landmarks when rotating.
 
@@ -318,51 +267,80 @@ def crop_multi_face_landmarks(img, pts_2d, landmarks, expand_ratio=1.0):
     # Get the box that wrap all landmarks.
     # box_top, box_left, box_bot, box_right = \
     # get_landmarks_wrapbox(landmarks)
-    box_left = np.min(landmarks.T[0])
-    box_right = np.max(landmarks.T[0])
-    box_top = np.min(landmarks.T[1])
-    box_bot = np.max(landmarks.T[1])
+    box_left = int(np.ceil(np.min(landmarks.T[0])))
+    box_right = int(np.ceil(np.max(landmarks.T[0])))
+    box_top = int(np.ceil(np.min(landmarks.T[1])))
+    box_bot = int(np.ceil(np.max(landmarks.T[1])))
 
+    box_height = box_bot-box_top
+    box_width = box_right-box_left
+    
     # Crop image to get the largest square region that satisfied:
     # 1. Contains all landmarks
     # 2. Center of the landmarks box is the center of the region.
-    center = [(box_left+box_right)/2, (box_top+box_bot)/2]
+    center = [int(np.ceil((box_left+box_right)/2)), int(np.ceil((box_top+box_bot)/2))]
     
     # Get the diameter of largest region 
     # that a landmark can reach when rotating.
-    box_height = box_bot-box_top
-    box_width = box_right-box_left
-    radius = max(box_height, box_width) / 2
-
-    max_length = 2*np.sqrt(2)*radius
+    max_length = int(np.ceil(np.sqrt(np.power(box_height,2)+np.power(box_width,2))))
 
     # Crop a bit larger.
     crop_size = int(max_length/2 * expand_ratio)
+
     img_height, img_width, channel = img.shape
     canvas = np.zeros((img_height+2*crop_size, img_width+2*crop_size, channel), dtype=np.uint8)
     canvas[crop_size:img_height+crop_size, crop_size:img_width+crop_size, :] = img
+
+    # Adjust center coord.
     center[0] += crop_size
     center[1] += crop_size
 
-    bbox = [center[0] - radius, center[1] - radius, center[0] + radius, center[1] + radius]
-    center_x = (bbox[2] + bbox[0]) / 2
-    center_y = (bbox[3] + bbox[1]) / 2
-
     # Top left bottom right.
-    y1 = center_y-int(crop_size)
-    x1 = center_x-int(crop_size)
-    y2 = center_y+int(crop_size)
-    x2 = center_x+int(crop_size)
+    y1 = center[1]-int(crop_size)
+    x1 = center[0]-int(crop_size)
+    y2 = center[1]+int(crop_size)
+    x2 = center[0]+int(crop_size)
 
     # Crop image.
-    cropped_img = canvas[y1:y2, x1:x2]
+    img = canvas[y1:y2, x1:x2]
     
-    cropped_landmarks = landmarks - np.array([x1, y1]) + crop_size
-    cropped_pts_2d = pts_2d - np.array([x1, y1]) + crop_size
+    # Adjust landmarks and center
+    landmarks.T[0] = landmarks.T[0] - x1 + crop_size
+    landmarks.T[1] = landmarks.T[1] - y1 + crop_size
 
-    return cropped_img, cropped_pts_2d, cropped_landmarks
+    return img, landmarks
 
-import sympy
+
+def close_eyes_68_ver_2(pts):
+    # Axis of upper and lower eyes landmarks.
+    pt_36 = sympy.Point(pts[36])
+    pt_39 = sympy.Point(pts[39])
+    right_axis = sympy.geometry.Line(pt_36, pt_39)
+
+    pt_42 = sympy.Point(pts[42])
+    pt_45 = sympy.Point(pts[45])
+    left_axis = sympy.geometry.Line(pt_42, pt_45)
+
+    # Pull the lower landmarks to the axis.
+    pt_41 = sympy.Point(pts[41])
+    pt_40 = sympy.Point(pts[40])
+    pt_47 = sympy.Point(pts[47])
+    pt_46 = sympy.Point(pts[46])
+
+    projected_pt_41 = right_axis.projection(pt_41)
+    projected_pt_40 = right_axis.projection(pt_40)
+
+    projected_pt_47 = left_axis.projection(pt_47)
+    projected_pt_46 = left_axis.projection(pt_46)
+
+    pts[37] = pts[41] = (np.array(projected_pt_41).astype(np.float32) + pts[41])/2
+    pts[38] = pts[40] = (np.array(projected_pt_40).astype(np.float32) + pts[40])/2
+    pts[43] = pts[47] = (np.array(projected_pt_47).astype(np.float32) + pts[47])/2
+    pts[44] = pts[46] = (np.array(projected_pt_46).astype(np.float32) + pts[46])/2
+
+    return pts
+
+
 def close_eyes_68_ver_1(pts):
     '''
     Simple version.
@@ -399,39 +377,40 @@ def close_eyes_68_ver_1(pts):
     pts[47] = pts[43] = np.array(projected_pt_43).astype(np.float32)
     pts[46] = pts[44] = np.array(projected_pt_44).astype(np.float32)
     
-    '''
-    Move lower eyes up.
-    '''
-    # pt_41 = sympy.Point(pts[41])
-    # pt_40 = sympy.Point(pts[40])
-    # pt_47 = sympy.Point(pts[47])
-    # pt_46 = sympy.Point(pts[46])
+    return pts
 
-    # projected_pt_41 = right_axis.projection(pt_41)
-    # projected_pt_40 = right_axis.projection(pt_40)
+def open_eyes_68(pts):
+    # pts[37] = pts[41] = (pts[37]+pts[41]) / 2
+    # pts[38] = pts[40] = (pts[38]+pts[40]) / 2
+    # pts[43] = pts[47] = (pts[43]+pts[47]) / 2
+    # pts[44] = pts[46] = (pts[44]+pts[46]) / 2
 
-    # projected_pt_47 = left_axis.projection(pt_47)
-    # projected_pt_46 = left_axis.projection(pt_46)
+    # pt37 = sympy.Point(pts[37])
+    # pt38 = sympy.Point(pts[38])
+    # pt43 = sympy.Point(pts[43])
+    # pt44 = sympy.Point(pts[44])
+    pt41 = sympy.Point(pts[41])
+    pt40 = sympy.Point(pts[40])
+    pt47 = sympy.Point(pts[47])
+    pt46 = sympy.Point(pts[46])
 
-    # pts[41] = np.array(projected_pt_37).astype(np.float32)
-    # pts[40] = np.array(projected_pt_38).astype(np.float32)
-    # pts[47] = np.array(projected_pt_43).astype(np.float32)
-    # pts[46] = np.array(projected_pt_44).astype(np.float32)
+    pt36 = sympy.Point(pts[36])
+    pt39 = sympy.Point(pts[39])
+    pt42 = sympy.Point(pts[42])
+    pt45 = sympy.Point(pts[45])
+
+    axis_left = sympy.geometry.Line(pt42, pt45)
+    axis_right = sympy.geometry.Line(pt36, pt39)
+    
+    pts[37] = np.array(pt41.reflect(axis_right)).astype(np.float32)
+    pts[38] = np.array(pt40.reflect(axis_right)).astype(np.float32)
+    pts[43] = np.array(pt47.reflect(axis_left)).astype(np.float32)
+    pts[44] = np.array(pt46.reflect(axis_left)).astype(np.float32)
 
     return pts
 
-def close_eyes_68_ver_2(pts):
-    '''
-    Simple version.
-    '''
-    pts[37] = pts[41] = pts[37] + (pts[41] - pts[37])*3/4
-    pts[38] = pts[40] = pts[38] + (pts[40] - pts[38])*3/4
-    pts[43] = pts[47] = pts[43] + (pts[47] - pts[43])*3/4
-    pts[44] = pts[46] = pts[44] + (pts[46] - pts[44])*3/4
 
-    return pts
-
-def resize_face_landmarks(img, pts_2d, landmarks, shape=(256,256)):
+def resize_face_landmarks(img, landmarks, shape=(256,256)):
     height, width, _ = img.shape
 
     width_ratio = shape[0] / width
@@ -439,43 +418,49 @@ def resize_face_landmarks(img, pts_2d, landmarks, shape=(256,256)):
 
     img = cv2.resize(img, shape)
 
-    # landmarks.T[0] = landmarks.T[0]*width_ratio
-    # landmarks.T[1] = landmarks.T[1]*height_ratio
+    landmarks.T[0] = landmarks.T[0]*width_ratio
+    landmarks.T[1] = landmarks.T[1]*height_ratio
 
-    landmarks *= np.array([width_ratio, height_ratio])
-    pts_2d *= np.array([width_ratio, height_ratio])
+    return img, landmarks
 
-    return img, pts_2d, landmarks
+
+def check_eye_status(eye, closed_threshold=0.1, opened_threshold=0.3):
+    p2_minus_p6 = np.linalg.norm(eye[1] - eye[5])
+    p3_minus_p5 = np.linalg.norm(eye[2] - eye[4])
+    p1_minus_p4 = np.linalg.norm(eye[0] - eye[3])
+    ear = (p2_minus_p6 + p3_minus_p5) / (2.0 * p1_minus_p4)
+
+    if ear <= closed_threshold:
+        return 'closed'
+    elif ear >= opened_threshold:
+        return 'opened'
+    elif closed_threshold < ear < 0.25:
+        return 'semi'
+    else:
+        return 'unk'
 
 def get_eyes(pts):
-    right = pts[36:42]
-    left = pts[42:48]
+    left = pts[36:42]
+    right = pts[42:48]
 
     return {
         'left': left,
         'right': right
     }
 
-def replace_eyes(pts_2d, pts_3D):
-    pts_3D[37] = pts_2d[37]
-    pts_3D[41] = pts_2d[41]
-    pts_3D[38] = pts_2d[38]
-    pts_3D[40] = pts_2d[40]
-    pts_3D[43] = pts_2d[43]
-    pts_3D[47] = pts_2d[47]
-    pts_3D[44] = pts_2d[44]
-    pts_3D[46] = pts_2d[46]
+def replace_eyes(pts_2d, pts_3d):
+    pts_3d[37] = pts_2d[37]
+    pts_3d[41] = pts_2d[41]
+    pts_3d[38] = pts_2d[38]
+    pts_3d[40] = pts_2d[40]
+    pts_3d[43] = pts_2d[43]
+    pts_3d[47] = pts_2d[47]
+    pts_3d[44] = pts_2d[44]
+    pts_3d[46] = pts_2d[46]
 
-    pts_3D[36] = pts_2d[36]
-    pts_3D[39] = pts_2d[39]
-    pts_3D[42] = pts_2d[42]
-    pts_3D[45] = pts_2d[45]
+    pts_3d[36] = pts_2d[36]
+    pts_3d[39] = pts_2d[39]
+    pts_3d[42] = pts_2d[42]
+    pts_3d[45] = pts_2d[45]
 
-    return pts_3D
-
-def draw_pts(img, pts):
-    foo_img = img.copy()
-    for pt in pts:
-        pt = pt.astype(int)
-        foo_img = cv2.circle(foo_img, pt,2,(0,255,0), -1, 8)
-    cv2.imwrite(f'foo.jpg', foo_img)
+    return pts_3d
