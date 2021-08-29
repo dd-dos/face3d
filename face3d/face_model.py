@@ -1,3 +1,4 @@
+from utils import draw_pts
 from . import morphable_model
 from . import utils
 from . import mesh
@@ -74,10 +75,10 @@ class FaceModel:
             :img: output image after processing.
             :pt: output landmarks after processing. 
         """
-        img, pt = utils.crop_face_landmarks(img, pt, expand_ratio)
-        img, pt = utils.resize_face_landmarks(img, pt, shape)
+        cropped_img, cropped_pt = utils.crop_face_landmarks(img, pt, expand_ratio)
+        resized_img, resized_pt = utils.resize_face_landmarks(cropped_img, cropped_pt, shape)
 
-        return img, pt
+        return resized_img, resized_pt
     
     def get_3DDFA_params(self, img, pt):
         """
@@ -269,32 +270,35 @@ class FaceModel:
                                 preprocess=True, 
                                 expand_ratio=1., 
                                 shape=(128,128), 
-                                horizontal=[-30, -20, 0, 20, 30],
-                                vertical=[-30, 30]):
+                                horizontal=0,
+                                vertical=0):
         cart = []
 
         if preprocess:
-            img, pt = self._preprocess_face_landmarks(img, pt, expand_ratio=expand_ratio, shape=shape)
-        
-        params, extra = self.get_3DDFA_params(img, pt)
+            preprocessed_img, preprocessed_pt = self._preprocess_face_landmarks(img, pt, expand_ratio=expand_ratio, shape=shape)
+        else:
+            preprocessed_img = img
+            preprocessed_pt = pt
 
-        roi_box = utils.get_landmarks_wrapbox(pt)
+        params, extra = self.get_3DDFA_params(preprocessed_img, preprocessed_pt)
 
-        cart.append((img, {'params': params, 'roi_box': roi_box}))
+        roi_box = utils.get_landmarks_wrapbox(preprocessed_pt)
+
+        cart.append((preprocessed_img, {'params': params, 'roi_box': roi_box}))
 
         angles = extra['angles']
 
         if np.abs(angles[0]) > 10 and np.abs(angles[1]) > 10:
             return cart
         elif np.abs(angles[1]) > 10:
-            horizontal = [0]
+            horizontal = 0
         elif np.abs(angles[1]) > 10:
-            vertical = [0]
+            vertical = 0
 
-        vertices = self.reconstruct_vertex(img, params, de_normalize=False)
-        colors = _get_colors(img, vertices.astype(int))
+        vertices = self.reconstruct_vertex(preprocessed_img, params, de_normalize=False)
+        colors = _get_colors(preprocessed_img, vertices.astype(int))
 
-        h,w,_ = img.shape
+        h,w,_ = preprocessed_img.shape
         vertices.T[1] = h - 1 - vertices.T[1]
         vertices.T[0] -= w/2
         vertices.T[1] -= h/2
@@ -309,7 +313,7 @@ class FaceModel:
         obj['vertices'] = vertices
         obj['colors'] = colors
         obj['scale'] = np.float32(1)
-        obj['angles'] = [np.random.choice(vertical), np.random.choice(horizontal), 0]
+        obj['angles'] = [vertical, horizontal, 0]
         obj['trans'] = [0,0,0]
 
         rotated_img, rotated_vertices = self._transform_test(obj, camera, h, w)

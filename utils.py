@@ -1,3 +1,4 @@
+from face3d.utils import draw_landmarks
 import os
 import sys
 import time
@@ -182,7 +183,7 @@ def fliplr_face_landmarks(img, pts, reverse=True):
     '''
     Return points to orginal status.
     '''
-    width, height = img.shape[:2]
+    height, width = img.shape[:2]
     if reverse:
         pts.T[0] += width/2
         pts.T[1] += height/2
@@ -332,21 +333,20 @@ def crop_multi_face_landmarks(img, pts_2d, landmarks, expand_ratio=1.0):
     box_height = box_bot-box_top
     box_width = box_right-box_left
     radius = max(box_height, box_width) / 2
-    bbox = [center[0] - radius, center[1] - radius, center[0] + radius, center[1] + radius]
-    center_x = (bbox[2] + bbox[0]) / 2
-    center_y = (bbox[3] + bbox[1]) / 2
+
+    max_length = 2*np.sqrt(2)*radius
 
     # Crop a bit larger.
-    max_length = np.sqrt((bbox[2] - bbox[0]) ** 2 + (bbox[3] - bbox[1]) ** 2)
     crop_size = int(max_length/2 * expand_ratio)
-
     img_height, img_width, channel = img.shape
     canvas = np.zeros((img_height+2*crop_size, img_width+2*crop_size, channel), dtype=np.uint8)
     canvas[crop_size:img_height+crop_size, crop_size:img_width+crop_size, :] = img
+    center[0] += crop_size
+    center[1] += crop_size
 
-    # Adjust center coord.
-    center_x += crop_size
-    center_y += crop_size
+    bbox = [center[0] - radius, center[1] - radius, center[0] + radius, center[1] + radius]
+    center_x = (bbox[2] + bbox[0]) / 2
+    center_y = (bbox[3] + bbox[1]) / 2
 
     # Top left bottom right.
     y1 = center_y-int(crop_size)
@@ -355,16 +355,12 @@ def crop_multi_face_landmarks(img, pts_2d, landmarks, expand_ratio=1.0):
     x2 = center_x+int(crop_size)
 
     # Crop image.
-    img = canvas[y1:y2, x1:x2]
+    cropped_img = canvas[y1:y2, x1:x2]
     
-    # Adjust landmarks and center
-    landmarks.T[0] = landmarks.T[0] - x1 + crop_size
-    landmarks.T[1] = landmarks.T[1] - y1 + crop_size
+    cropped_landmarks = landmarks - np.array([x1, y1]) + crop_size
+    cropped_pts_2d = pts_2d - np.array([x1, y1]) + crop_size
 
-    pts_2d.T[0] += crop_size - x1
-    pts_2d.T[1] += crop_size - y1
- 
-    return img, pts_2d, landmarks
+    return cropped_img, cropped_pts_2d, cropped_landmarks
 
 import sympy
 def close_eyes_68_ver_1(pts):

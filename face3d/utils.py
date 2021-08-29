@@ -90,7 +90,7 @@ def show_pts(img, pts, mode='RGB'):
     Image.fromarray(_img).show()
 
 
-@numba.njit()
+# @numba.njit()
 def crop_face_landmarks(img, landmarks, expand_ratio=1.0):
     """
     Pad and crop to retain landmarks when rotating.
@@ -110,28 +110,28 @@ def crop_face_landmarks(img, landmarks, expand_ratio=1.0):
     # Crop image to get the largest square region that satisfied:
     # 1. Contains all landmarks
     # 2. Center of the landmarks box is the center of the region.
-    center = [(box_left+box_right)/2, (box_top+box_bot)/2]
+    center = [(box_right+box_left)/2, (box_bot+box_top)/2]
     
     # Get the diameter of largest region 
     # that a landmark can reach when rotating.
     box_height = box_bot-box_top
     box_width = box_right-box_left
     radius = max(box_height, box_width) / 2
-    bbox = [center[0] - radius, center[1] - radius, center[0] + radius, center[1] + radius]
-    center_x = int((bbox[2] + bbox[0]) / 2)
-    center_y = int((bbox[3] + bbox[1]) / 2)
+
+    max_length = 2*np.sqrt(2)*radius
 
     # Crop a bit larger.
-    max_length = np.sqrt((bbox[2] - bbox[0]) ** 2 + (bbox[3] - bbox[1]) ** 2)
     crop_size = int(max_length/2 * expand_ratio)
 
     img_height, img_width, channel = img.shape
     canvas = np.zeros((img_height+2*crop_size, img_width+2*crop_size, channel), dtype=np.uint8)
     canvas[crop_size:img_height+crop_size, crop_size:img_width+crop_size, :] = img
+    center[0] += crop_size
+    center[1] += crop_size
 
-    # Adjust center coord.
-    center_x += crop_size
-    center_y += crop_size
+    bbox = [center[0] - radius, center[1] - radius, center[0] + radius, center[1] + radius]
+    center_x = int((bbox[2]+bbox[0])/2)
+    center_y = int((bbox[3]+bbox[1])/2)
 
     # Top left bottom right.
     y1 = center_y-crop_size
@@ -140,13 +140,14 @@ def crop_face_landmarks(img, landmarks, expand_ratio=1.0):
     x2 = center_x+crop_size
 
     # Crop image.
-    img = canvas[y1:y2, x1:x2]
+    cropped_img = canvas[y1:y2, x1:x2]
     
     # Adjust landmarks and center
-    landmarks.T[0] = landmarks.T[0] - x1 + crop_size
-    landmarks.T[1] = landmarks.T[1] - y1 + crop_size
-
-    return img, landmarks
+    # landmarks.T[0] = landmarks.T[0] - x1 + crop_size
+    # landmarks.T[1] = landmarks.T[1] - y1 + crop_size
+    cropped_landmarks = landmarks - np.array([x1, y1]) + crop_size
+    
+    return cropped_img, cropped_landmarks
 
 
 def resize_face_landmarks(img, landmarks, shape=(256,256)):

@@ -424,7 +424,7 @@ def resize_face_landmarks(img, landmarks, shape=(256,256)):
     return img, landmarks
 
 
-def check_eye_status(eye, closed_threshold=0.15, opened_threshold=0.3):
+def check_eye_status(eye, closed_threshold=0.1, opened_threshold=0.3):
     p2_minus_p6 = np.linalg.norm(eye[1] - eye[5])
     p3_minus_p5 = np.linalg.norm(eye[2] - eye[4])
     p1_minus_p4 = np.linalg.norm(eye[0] - eye[3])

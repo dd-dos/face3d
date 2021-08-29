@@ -28,24 +28,24 @@ def task(img_path):
         print(e)
         return
 
-    img, pts_2d, pts_3d = utils.crop_multi_face_landmarks(img, pts_2d, pts_3d, expand_ratio=1.)
-    img, pts_2d, pts_3d = utils.resize_face_landmarks(img, pts_2d, pts_3d, shape=(128,128))
+    # img, pts_2d, pts_3d = utils.crop_multi_face_landmarks(img, pts_2d, pts_3d, expand_ratio=1.)
+    # img, pts_2d, pts_3d = utils.resize_face_landmarks(img, pts_2d, pts_3d, shape=(128,128))
     
     token = img_path.split('/')
     folder_id = token[-2]
     file_id = token[-1]
 
-    out_path = f'300VW-3D_cropped/{folder_id}/{file_id}'
+    out_path = f'300VW-3D_and_2D/{folder_id}/{file_id}'
     cv2.imwrite(out_path, img)
-    sio.savemat(f'300VW-3D_cropped/{folder_id}/{file_id}'.replace('jpg', 'mat'), {'pt3d': pts_3d, 'pt2d': pts_2d})
+    sio.savemat(f'300VW-3D_and_2D/{folder_id}/{file_id}'.replace('jpg', 'mat'), {'pt3d': pts_3d, 'pt2d': pts_2d})
 
 if __name__=='__main__':
-    shutil.rmtree('300VW-3D_cropped', ignore_errors=True)
-    os.makedirs('300VW-3D_cropped', exist_ok=True)
+    shutil.rmtree('300VW-3D_and_2D', ignore_errors=True)
+    os.makedirs('300VW-3D_and_2D', exist_ok=True)
     for folder_path in glob.glob('300VW-3D/*'):
         folder_img_name = folder_path.split('/')[-1]
         os.makedirs(
-            os.path.join(f'300VW-3D_cropped', folder_img_name),
+            os.path.join(f'300VW-3D_and_2D', folder_img_name),
             exist_ok=True
         )
 
