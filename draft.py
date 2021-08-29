@@ -1,5 +1,5 @@
 from PIL.Image import new
-from matplotlib.pyplot import show
+from matplotlib.pyplot import draw, show
 from face3d.mesh import render, transform
 import cv2
 import numba
@@ -60,18 +60,20 @@ def generated_rotated_sample(height,
 if __name__=='__main__':
     # img, vertex = model._preprocess_face_landmarks(img, vertex)
     # rimg, _ = model.augment_rotate(img, vertex, [-70,0,0], base_size=180*0.7, de_normalize=False)
-    img = cv2.imread('samples/053_error/1194.jpg')
-    vertex_3d = sio.loadmat('samples/053_error/1194.mat')['pt3d']
+    img = cv2.imread('300WLP/300WLP-verified/300WLP-std_image_train_0871_3.jpg')
+    vertex_3d = sio.loadmat('300WLP/300WLP-verified/300WLP-std_image_train_0871_3.mat')['pt3d']
 
     # vertex_2d = sio.loadmat('samples/001_original/0575.mat')['pt2d']
     # vertex_3d = utils.replace_eyes(vertex_2d, vertex_3d)
-    show_pts(img.copy(), vertex_3d.copy(), 'BGR')
+    # show_pts(img.copy(), vertex_3d.copy(), 'BGR')
 
-    output = model.generate_3ddfa_params_plus(
-        img, vertex_3d, preprocess=False, horizontal=[0], vertical=[0])
+    # output = model.generate_3ddfa_params_plus(
+    #     img, vertex_3d, preprocess=False, horizontal=[0], vertical=[0])
     
-    for out in output:
-        rimg = out[0]
-        params = out[1]['params']
-        vertex = model.reconstruct_vertex(rimg, params, False)[model.bfm.kpt_ind]
-        show_pts(rimg, vertex, 'BGR')
+    # for out in output:
+    #     rimg = out[0]
+    #     params = out[1]['params']
+    #     vertex = model.reconstruct_vertex(rimg, params, False)[model.bfm.kpt_ind]
+    #     show_pts(rimg, vertex, 'BGR')
+
+    draw_landmarks(img, vertex_3d)
