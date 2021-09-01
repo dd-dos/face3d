@@ -1,10 +1,6 @@
 from PIL.Image import new
-<<<<<<< HEAD
 from matplotlib.pyplot import show
 import face3d
-=======
-from matplotlib.pyplot import draw, show
->>>>>>> 96ef724472a1ed74a7867e1d97d3347bb3a7082b
 from face3d.mesh import render, transform
 import cv2
 import numba
@@ -87,14 +83,14 @@ if __name__=='__main__':
 
     img = cv2.imread('examples/Data/300WLP-std_134212_1_0.jpg')
     pts = sio.loadmat('examples/Data/300WLP-std_134212_1_0.mat')['pt3d']
-    # img = cv2.copyMakeBorder(img, 0, 0, 300, 300, borderType=0)
-    # pts.T[0] += 300
-    # show_pts(img, pts, mode='BGR')
+    img = cv2.copyMakeBorder(img, 0, 0, 110, 110, borderType=0)
+    pts.T[0] += 110
+    show_pts(img, pts, mode='BGR')
 
-    # img, pt = resize_face_landmarks(img, pts)
-    # show_pts(img, pts, mode='BGR')
+    img, pt = resize_face_landmarks(img, pts)
+    show_pts(img, pts, mode='BGR')
 
-    img, params = model.generate_3ddfa_resize_params(img, pts)
+    img, params = model.generate_3ddfa_params(img, pts)
     # _,_,scale,angles,_ = model._parse_params(params['params'].copy(), de_normalize=False)
     # print(f'scale: {scale} - angle: {angles}')
 
