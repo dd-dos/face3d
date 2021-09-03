@@ -57,6 +57,8 @@ class MorphabelModel(object):
         params_std_101[11] = 1.
         self.params_std_101 = params_std_101
 
+        self.keypoints = np.load(f'{cwd}/BFM/keypoints_sim.npy')
+
 
     # ------------------------------------- shape: represented with mesh(vertices & triangles(fixed))
     def get_shape_para(self, type = 'random'):

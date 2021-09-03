@@ -184,16 +184,19 @@ def to_image(vertices, h, w, is_perspective = False):
     Returns:
         projected_vertices: [nver, 3]  
     '''
+    n_vertices = np.zeros(vertices.shape, dtype=np.float64)
+    n_vertices[:,2] = vertices[:,2]
+
     if is_perspective:
         # if perspective, the projected vertices are normalized to [-1, 1]. so change it to image size first.
-        vertices[:,0] = vertices[:,0]*w/2
-        vertices[:,1] = vertices[:,1]*h/2
+        n_vertices[:,0] = vertices[:,0]*w/2
+        n_vertices[:,1] = vertices[:,1]*h/2
     # move to center of image
-    vertices[:,0] = vertices[:,0] + w/2
-    vertices[:,1] = vertices[:,1] + h/2
+    n_vertices[:,0] = vertices[:,0] + w/2
+    n_vertices[:,1] = vertices[:,1] + h/2
     # flip vertices along y-axis.
-    vertices[:,1] = h - vertices[:,1] - 1
-    return vertices
+    n_vertices[:,1] = h - n_vertices[:,1] - 1
+    return n_vertices
 
 
 #### -------------------------------------------2. estimate transform matrix from correspondences.

@@ -420,14 +420,14 @@ def close_eyes_68_ver_1(pts):
 
     return pts
 
-def close_eyes_68_ver_2(pts):
+def close_eyes_68_ver_2(pts, ratio=3/4):
     '''
     Simple version.
     '''
-    pts[37] = pts[41] = pts[37] + (pts[41] - pts[37])*3/4
-    pts[38] = pts[40] = pts[38] + (pts[40] - pts[38])*3/4
-    pts[43] = pts[47] = pts[43] + (pts[47] - pts[43])*3/4
-    pts[44] = pts[46] = pts[44] + (pts[46] - pts[44])*3/4
+    pts[37] = pts[41] = pts[37] + (pts[41] - pts[37])*ratio
+    pts[38] = pts[40] = pts[38] + (pts[40] - pts[38])*ratio
+    pts[43] = pts[47] = pts[43] + (pts[47] - pts[43])*ratio
+    pts[44] = pts[46] = pts[44] + (pts[46] - pts[44])*ratio
 
     return pts
 

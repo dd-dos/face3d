@@ -14,7 +14,7 @@ import tqdm
 from PIL import Image, ImageFilter, ImageOps
 
 
-def show_ndarray_img(img, mode='RGB'):
+def show_ndarray_img(img, mode='RGB', name=''):
     if np.mean(img) <= 1:
         img = (img*255).astype(np.uint8)
 
@@ -22,7 +22,7 @@ def show_ndarray_img(img, mode='RGB'):
         img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
     
     # Image.fromarray(img).show()
-    cv2.imshow('',img)
+    cv2.imshow(name,img)
     cv2.waitKey(0)
     cv2.destroyAllWindows()
 
@@ -87,10 +87,12 @@ def show_pts(img, pts, mode='RGB'):
     
     if mode != 'RGB':
         _img = cv2.cvtColor(_img, cv2.COLOR_BGR2RGB)
-    Image.fromarray(_img).show()
 
+    cv2.imshow('',_img)
+    cv2.waitKey(0)
+    cv2.destroyAllWindows()
 
-# @numba.njit()
+@numba.njit()
 def crop_face_landmarks(img, landmarks, expand_ratio=1.0):
     """
     Pad and crop to retain landmarks when rotating.
