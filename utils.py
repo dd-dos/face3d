@@ -1,4 +1,3 @@
-from face3d.utils import draw_landmarks
 import os
 import sys
 import time
