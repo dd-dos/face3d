@@ -51,12 +51,14 @@ class FaceModel:
             :trans: translation vector.
         """
         h,w,_ = img.shape
-        pt.T[1] = h - 1 - pt.T[1]
-        pt.T[0] -= w/2
-        pt.T[1] -= h/2
+        n_pt = np.zeros(pt.shape)
+        n_pt.T[0] = pt.T[0] - w/2
+        n_pt.T[1] = h - 1 - pt.T[1] -h/2
+        # n_pt.T[0] -= w/2
+        # n_pt.T[1] -= h/2
 
         shp, exp, scale, angles, trans = self.bfm.reduced_fit(
-            pt, n_sp=self.n_shape, n_ep=self.n_exp, max_iter=3
+            n_pt, n_sp=self.n_shape, n_ep=self.n_exp, max_iter=3
         )
 
         return shp, exp, scale, angles, trans
@@ -121,6 +123,7 @@ class FaceModel:
                            set this False.
         """
         if de_normalize:
+            params = params.reshape(101,)
             params = params * self.bfm.params_std_101 + self.bfm.params_mean_101
 
         camera_matrix = params[:12].reshape(3, -1)
@@ -131,6 +134,13 @@ class FaceModel:
         exp = params[72:].reshape(-1, 1)
 
         return shp, exp, scale, angles, trans
+
+    def reconstruct_params(self, scale, rotation_matrix, trans, shp_exp):
+        scaled_rot_matrix = scale * rotation_matrix
+        camera_matrix = np.concatenate((scaled_rot_matrix, trans.reshape(-1,1)), axis=1)
+        params = np.concatenate((camera_matrix.reshape(12,1), shp_exp.reshape(-1,1)), axis=0)
+
+        return params
 
     def reconstruct_vertex(self, img, params, de_normalize=True):
         """
@@ -154,7 +164,7 @@ class FaceModel:
         image_vertices = mesh.transform.to_image(transformed_vertices, h, w)
 
         return image_vertices
-
+    
     def _transform_test(self, obj, camera, h = 256, w = 256):
         '''
         Args:
