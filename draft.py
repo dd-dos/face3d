@@ -1,3 +1,4 @@
+import logging
 from numpy.core.fromnumeric import squeeze
 from numpy.random import rand
 from face3d.mesh import light
@@ -7,10 +8,12 @@ import scipy.io as sio
 from face3d.utils import *
 from face3d.face_model import FaceModel, _get_colors
 from face3d import mesh
-from utils import close_eyes_68_ver_1, close_eyes_68_ver_2
+from utils import close_eyes_68_ver_1, close_eyes_68_ver_2, crop
 import numpy as np
 import random
+import time
 fm = FaceModel()
+import numba
 
 def light_test(vertices, light_positions, light_intensities, h = 256, w = 256, colors=None, light=True):
     if colors is None:
@@ -28,7 +31,7 @@ def light_test(vertices, light_positions, light_intensities, h = 256, w = 256, c
     rendering = np.minimum((np.maximum(rendering, 0)), 1)
     return rendering, image_vertices
 
-def squeeze_face(img, pts, pad_ratio=None, squeeze_type=None):
+def squeeze_face(img, pts, pad_ratio=None, squeeze_type='v'):
     ### Squeeze image and landmarks ###
 
     height, width = img.shape[:2] 
@@ -60,17 +63,23 @@ def squeeze_face(img, pts, pad_ratio=None, squeeze_type=None):
     re_pts = fm.reconstruct_vertex(n_img, info['params'], False)[fm.bfm.kpt_ind]
 
     show_pts(n_img, re_pts)
+    return n_img, info
 
-
-def random_crop(img, info, expand_ratio=1):
-    roi_box = info['roi_box']
-    params = info['params']
+@numba.njit()
+def random_crop_substep(img, roi_box, params, expand_ratio=None, target_size=128):
     camera_matrix = params[:12].reshape(3, -1)
-    scale, rotation_matrix, trans = mesh.transform.P2sRt(camera_matrix)
+
+    trans = camera_matrix[:, 3]
+    R1 = camera_matrix[0:1, :3]
+    R2 = camera_matrix[1:2, :3]
+    scale = (np.linalg.norm(R1) + np.linalg.norm(R2))/2.0
+    r1 = R1/np.linalg.norm(R1)
+    r2 = R2/np.linalg.norm(R2)
+    r3 = np.cross(r1, r2)
+
+    rotation_matrix = np.concatenate((r1, r2, r3), 0)
 
     # Get the box that wrap all landmarks.
-    # box_top, box_left, box_bot, box_right = \
-    # get_landmarks_wrapbox(landmarks)
     box_left = roi_box[0]
     box_right = roi_box[2]
     box_top = roi_box[1]
@@ -90,17 +99,36 @@ def random_crop(img, info, expand_ratio=1):
     max_length = 2*np.sqrt(2)*radius
 
     # Crop a bit larger.
+    if expand_ratio is None:
+        expand_ratio = random.uniform(1 / np.sqrt(2), 1.)
+    elif expand_ratio < 1 / np.sqrt(2):
+        '''
+        Expand ratio is a little too big, 
+        crop size will be negative and I don't wanna use more ops.")
+        '''
+        expand_ratio = 0.
+
     crop_size = int(max_length/2 * expand_ratio)
 
     img_height, img_width, channel = img.shape
     canvas = np.zeros((img_height+2*crop_size, img_width+2*crop_size, channel), dtype=np.uint8)
     canvas[crop_size:img_height+crop_size, crop_size:img_width+crop_size, :] = img
-    center[0] += crop_size
-    center[1] += crop_size
 
-    bbox = [center[0] - radius, center[1] - radius, center[0] + radius, center[1] + radius]
-    center_x = int((bbox[2]+bbox[0])/2)
-    center_y = int((bbox[3]+bbox[1])/2)
+    shift_value = crop_size - radius
+    '''
+    0.125 is purely selected from visualization.
+    '''
+    shift_value_x = int(box_width * 0.125 + shift_value)
+    shift_value_y = int(box_height * 0.125 + shift_value)
+
+    shift_x = np.random.randint(-shift_value_x, shift_value_x)
+    shift_y = np.random.randint(-shift_value_y, shift_value_y)
+
+    # shift_x = shift_value_x
+    # shift_y = shift_value_y
+
+    center_x = int(center[0] + crop_size) + shift_x
+    center_y = int(center[1] + crop_size) + shift_y
 
     # Top left bottom right.
     y1 = center_y-crop_size
@@ -108,23 +136,92 @@ def random_crop(img, info, expand_ratio=1):
     y2 = center_y+crop_size
     x2 = center_x+crop_size
 
-    re_trans = trans + np.array([crop_size, -crop_size, 0])
-    re_params = fm.reconstruct_params(scale, rotation_matrix, re_trans, params[12:])
-    re_pts = fm.reconstruct_vertex(img, re_params, False)[fm.bfm.kpt_ind]
-    show_pts(canvas, re_pts)
-
-    import ipdb; ipdb.set_trace(context=10)
     cropped_img = canvas[y1:y2, x1:x2]
 
-if __name__=='__main__':
-    img = cv2.imread('examples/Data/image00050.jpg')
-    pts = sio.loadmat('examples/Data/image00050.mat')['pt3d_68'].T[:,:2]
+    flip_matrix = np.array([[1,0,0],[0,-1,0],[0,0,1]], dtype=np.float64)
+    flip_offset = np.array([0, img_height, 0], dtype=np.float64)
+    norm_trans = np.array([img_width/2, img_height/2, 0], dtype=np.float64)
 
-    # img = cv2.imread('examples/Data/300WLP-std_134212_1_0.jpg')
-    # pts = sio.loadmat('examples/Data/300WLP-std_134212_1_0.mat')['pt3d']
+    cropped_trans = (flip_offset + np.array([-x1, -y1, 0])).reshape(3,) @ flip_matrix.T + norm_trans + trans
+
+    resized_scale = scale / (2*crop_size) * target_size
+    resized_trans = cropped_trans / (2*crop_size) * target_size
+
+    re_scaled_rot_matrix = resized_scale * rotation_matrix
+    re_camera_matrix = np.concatenate((re_scaled_rot_matrix, resized_trans.reshape(-1,1)), axis=1)
+    re_params = np.concatenate((re_camera_matrix.reshape(12,1), params[12:].reshape(-1,1)), axis=0)
+
+    return cropped_img, re_params
+
+def random_crop(img, roi_box, params, expand_ratio=1, target_size=128):
+    cropped_img, re_params = random_crop_substep(img, roi_box, params, expand_ratio, target_size)
+    re_img = cv2.resize(cropped_img, (target_size, target_size))
+
+    return re_img, re_params
+
+@numba.njit()
+def flip_substep(img, params):
+    img_height, img_width = img.shape[:2]
+
+    camera_matrix = params[:12].reshape(3, -1)
+
+    trans = camera_matrix[:, 3]
+    R1 = camera_matrix[0:1, :3]
+    R2 = camera_matrix[1:2, :3]
+    scale = (np.linalg.norm(R1) + np.linalg.norm(R2))/2.0
+    r1 = R1/np.linalg.norm(R1)
+    r2 = R2/np.linalg.norm(R2)
+    r3 = np.cross(r1, r2)
+
+    rotation_matrix = np.concatenate((r1, r2, r3), 0)
+
+    flip_matrix = np.array([[1,0,0],[0,-1,0],[0,0,1]], dtype=np.float64)
+    flip_offset = np.array([0, img_height, 0], dtype=np.float64)
+
+    norm_trans = np.array([img_width/2, img_height/2, 0], dtype=np.float64)
+
+    flipped_rotation_matrix = flip_matrix @ (scale*rotation_matrix)
+    flipped_trans = (trans + norm_trans) @ flip_matrix.T + flip_offset - norm_trans
+
+    flipped_camera_matrix = np.concatenate((flipped_rotation_matrix, flipped_trans.reshape(-1,1)), axis=1)
+    
+    flipped_params = np.concatenate((flipped_camera_matrix.reshape(12,1), params[12:].reshape(-1,1)), axis=0)
+
+    return flipped_params
+
+def flip(img, params):
+    flipped_params = flip_substep(img, params)
+    flipped_img = cv2.flip(img, 0)
+
+    re_pts = fm.reconstruct_vertex(flipped_img, flipped_params, False)[fm.bfm.kpt_ind]
+    show_pts(flipped_img, re_pts)
+
+if __name__=='__main__':
+    # img = cv2.imread('examples/Data/image00050.jpg')
+    # pts = sio.loadmat('examples/Data/image00050.mat')['pt3d_68'].T[:,:2]
+
+    img = cv2.imread('examples/Data/300WLP-std_134212_1_0.jpg')
+    pts = sio.loadmat('examples/Data/300WLP-std_134212_1_0.mat')['pt3d']
     size = 450
 
+    '''
+    Generate params
+    '''
     n_img, info = fm.generate_3ddfa_params(img, pts, False, shape=(size,size), expand_ratio=1.)
 
-    random_crop(n_img, info)
-    # light_img, light_pts = light_test(re_pts, np.array([[0,-0,-50]]), np.array([[1,1,1]]), size, size, light=False)
+    '''
+    Random crop
+    '''
+    # n_img, n_params = random_crop(n_img, info['roi_box'], info['params'], expand_ratio=1.)
+    # re_pts = fm.reconstruct_vertex(n_img, n_params, False)[fm.bfm.kpt_ind]
+    # show_pts(n_img, re_pts)
+
+    '''
+    Flip vertically
+    '''
+    flip(n_img, info['params'])
+
+    '''
+    Squeeze face
+    '''
+    # squeeze_face(img, pts, 0.1, 'h')
