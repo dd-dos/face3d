@@ -329,18 +329,26 @@ class FaceModel:
 
         cart.append((preprocessed_img, {'params': params, 'roi_box': roi_box}))
 
-        angles = extra['angles']
+        current_pitch, current_yaw, current_roll = extra['angles']
 
         if ignore_high_pitch:
-            if np.abs(angles[0]) > 25:
+            if np.abs(current_pitch) > 20:
                 return
-
-            if np.abs(angles[0]) > 10 and np.abs(angles[1]) > 10:
-                return cart
-            elif np.abs(angles[1]) > 10:
-                pitch = 0
-            elif np.abs(angles[0]) > 10:
-                yaw = 0
+            elif 20 >= np.abs(current_pitch) >= 10:
+                pitch = current_pitch
+            else:
+                pass
+            
+        if current_pitch <= 0:
+            pitch = -np.abs(pitch)
+        else:
+            pitch = np.abs(pitch)
+        
+        if current_yaw <= 0:
+            yaw = -np.abs(yaw)
+        else:
+            yaw = np.abs(yaw)
+        
 
         vertices = self.reconstruct_vertex(preprocessed_img, params, de_normalize=False)
         colors = _get_colors(preprocessed_img, vertices.astype(int))
