@@ -312,8 +312,8 @@ class FaceModel:
                                 preprocess=True, 
                                 expand_ratio=1., 
                                 shape=(128,128), 
-                                horizontal=0,
-                                vertical=0):
+                                yaw=0,
+                                pitch=0):
         cart = []
 
         if preprocess:
@@ -333,9 +333,9 @@ class FaceModel:
         if np.abs(angles[0]) > 10 and np.abs(angles[1]) > 10:
             return cart
         elif np.abs(angles[1]) > 10:
-            horizontal = 0
-        elif np.abs(angles[1]) > 10:
-            vertical = 0
+            pitch = 0
+        elif np.abs(angles[0]) > 10:
+            yaw = 0
 
         vertices = self.reconstruct_vertex(preprocessed_img, params, de_normalize=False)
         colors = _get_colors(preprocessed_img, vertices.astype(int))
@@ -355,7 +355,7 @@ class FaceModel:
         obj['vertices'] = vertices
         obj['colors'] = colors
         obj['scale'] = np.float32(1)
-        obj['angles'] = [vertical, horizontal, 0]
+        obj['angles'] = [pitch, yaw, 0]
         obj['trans'] = [0,0,0]
 
         rotated_img, rotated_vertices = self._transform_test(obj, camera, h, w)

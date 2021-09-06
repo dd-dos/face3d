@@ -25,8 +25,8 @@ def light_test(vertices, light_positions, light_intensities, h = 256, w = 256, c
     else:
         lit_colors = colors
 
-    # image_vertices = mesh.transform.to_image(vertices, h, w)
-    image_vertices = vertices
+    image_vertices = mesh.transform.to_image(vertices, h, w)
+    # image_vertices = vertices
     rendering = mesh.render.render_colors(image_vertices, fm.bfm.triangles, lit_colors, h, w)
     rendering = np.minimum((np.maximum(rendering, 0)), 1)
     return rendering, image_vertices
@@ -204,6 +204,7 @@ if __name__=='__main__':
     pts = sio.loadmat('examples/Data/300WLP-std_134212_1_0.mat')['pt3d']
     size = 450
 
+    height, width = img.shape[:2]
     '''
     Generate params
     '''
@@ -219,9 +220,31 @@ if __name__=='__main__':
     '''
     Flip vertically
     '''
-    flip(n_img, info['params'])
+    # flip(n_img, info['params'])
 
     '''
     Squeeze face
     '''
     # squeeze_face(img, pts, 0.1, 'h')
+
+    '''
+    Light
+    '''
+    # shp, exp, scale, angles, trans = fm._parse_params(info['params'], False)
+    # vertices = fm.bfm.reduced_generated_vertices(shp, exp)
+    # vertices = vertices - np.mean(vertices, 0)[np.newaxis, :]
+    # vertices = mesh.transform.similarity_transform(
+    #     vertices, 
+    #     scale, 
+    #     mesh.transform.angle2matrix([0, 0, 0]), 
+    #     [0, 0, 0]) 
+    vertices = fm.reconstruct_vertex(n_img, info['params'], False)
+    vertices[:,1] = height - vertices[:,1] - 1
+
+    vertices = vertices - np.mean(vertices, 0)[np.newaxis, :]
+    # flip vertices along y-axis.
+    
+    light_positions = np.array([[0,-200,300]])
+    light_intensities = np.array([[1,1,1]])
+    light_img, light_vertices = light_test(vertices, light_positions, light_intensities)
+    show_pts(light_img, light_vertices[fm.bfm.kpt_ind], 'BGR')

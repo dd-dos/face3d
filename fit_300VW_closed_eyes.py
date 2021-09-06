@@ -40,10 +40,10 @@ if __name__=='__main__':
         original_pts = sio.loadmat(pts_path)['pt3d']
 
         expand_ratio = 1.
-        horizontal = random.uniform(-30,30)
-        vertical = random.uniform(-20,20)
+        yaw = random.uniform(-30,30)
+        pitch = random.uniform(-20,20)
 
-        output = model.generate_3ddfa_params_plus(original_img, original_pts, expand_ratio=expand_ratio, preprocess=False, horizontal=horizontal, vertical=vertical)
+        output = model.generate_3ddfa_params_plus(original_img, original_pts, expand_ratio=expand_ratio, preprocess=False, yaw=yaw, pitch=pitch)
         for idx in range(len(output)):
             ori_img = output[idx][0]
             ori_params = output[idx][1]
@@ -61,10 +61,10 @@ if __name__=='__main__':
         # # draw_landmarks(fliplr_img.copy(), fliplr_pts.copy(), f'intermediate.jpg')
 
         # expand_ratio = random.uniform(1,1.4)
-        # horizontal = random.uniform(-30,30)
-        # vertical = random.uniform(-20,20)
+        # yaw = random.uniform(-30,30)
+        # pitch = random.uniform(-20,20)
 
-        # fliplr_output = model.generate_3ddfa_params_plus(fliplr_img, fliplr_pts, expand_ratio=expand_ratio, preprocess=True, horizontal=horizontal, vertical=vertical)
+        # fliplr_output = model.generate_3ddfa_params_plus(fliplr_img, fliplr_pts, expand_ratio=expand_ratio, preprocess=True, yaw=yaw, pitch=pitch)
         # for idx in range(len(fliplr_output)):
         #     fliplr_img = fliplr_output[idx][0]
         #     fliplr_params = fliplr_output[idx][1]
