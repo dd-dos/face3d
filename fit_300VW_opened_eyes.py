@@ -27,6 +27,8 @@ if __name__=='__main__':
 
     model = FaceModel()
     img_list = list(Path('GANnotation/300VW-3D_opened_eyes').glob('**/*.jpg'))
+    img_list = [img_list[idx] for idx in range(len(img_list)) if idx%3==0]
+
     bag = []
     print(f'Push item to bag: ')
     for img_path in tqdm.tqdm(img_list):
@@ -41,10 +43,10 @@ if __name__=='__main__':
         original_pts = sio.loadmat(pts_path)['pt3d']
 
         expand_ratio = 1.
-        yaw = np.random.choice([random.uniform(-50, -30), random.uniform(-30,30), random.uniform(30,50)])
-        pitch = np.random.choice([random.uniform(-70, -60), random.uniform(-60, 50)])
+        yaw = np.random.choice([random.uniform(-50, -40), random.uniform(-40,40), random.uniform(40,50)], p=[0.3, 0.4, 0.3])
+        pitch = np.random.choice([random.uniform(-70, -60), random.uniform(-60, 40)], p=[0.7,0.3])
 
-        output = model.generate_3ddfa_params_plus(original_img, original_pts, expand_ratio=expand_ratio, preprocess=False, yaw=yaw, pitch=pitch)
+        output = model.generate_3ddfa_params_plus(original_img, original_pts, expand_ratio=expand_ratio, preprocess=False, yaw=yaw, pitch=pitch, ignore_high_pitch=False)
         for idx in range(len(output)):
             ori_img = output[idx][0]
             ori_params = output[idx][1]
