@@ -44,6 +44,10 @@ if __name__=='__main__':
         pitch = random.uniform(-20,20)
 
         output = model.generate_3ddfa_params_plus(original_img, original_pts, expand_ratio=expand_ratio, preprocess=False, yaw=yaw, pitch=pitch)
+        
+        if output is None:
+            return
+
         for idx in range(len(output)):
             ori_img = output[idx][0]
             ori_params = output[idx][1]

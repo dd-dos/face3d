@@ -330,6 +330,9 @@ class FaceModel:
 
         angles = extra['angles']
 
+        if np.abs(angles[0]) > 25:
+            return
+
         if np.abs(angles[0]) > 10 and np.abs(angles[1]) > 10:
             return cart
         elif np.abs(angles[1]) > 10:
