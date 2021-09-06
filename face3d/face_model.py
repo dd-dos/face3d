@@ -130,8 +130,8 @@ class FaceModel:
         scale, rotation_matrix, trans = mesh.transform.P2sRt(camera_matrix)
         angles = mesh.transform.matrix2angle(rotation_matrix)
 
-        shp = params[12:72].reshape(-1, 1)
-        exp = params[72:].reshape(-1, 1)
+        shp = params[12:12+self.n_shape].reshape(-1, 1)
+        exp = params[12+self.n_shape:].reshape(-1, 1)
 
         return shp, exp, scale, angles, trans
 
@@ -156,7 +156,7 @@ class FaceModel:
             :image_vertices: 3d face point cloud of input image.
         """
         shp, exp, scale, angles, trans = self._parse_params(params, de_normalize)
-
+        
         h, w, _ = img.shape
 
         vertices = self.bfm.reduced_generated_vertices(shp, exp)
