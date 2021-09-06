@@ -39,11 +39,11 @@ if __name__=='__main__':
         original_img = cv2.imread(img_path)
         original_pts = sio.loadmat(pts_path)['pt3d']
 
-        expand_ratio = random.uniform(1,1.4)
+        expand_ratio = 1.
         horizontal = random.uniform(-30,30)
         vertical = random.uniform(-20,20)
 
-        output = model.generate_3ddfa_params_plus(original_img, original_pts, expand_ratio=expand_ratio, preprocess=True, horizontal=horizontal, vertical=vertical)
+        output = model.generate_3ddfa_params_plus(original_img, original_pts, expand_ratio=expand_ratio, preprocess=False, horizontal=horizontal, vertical=vertical)
         for idx in range(len(output)):
             ori_img = output[idx][0]
             ori_params = output[idx][1]
@@ -57,26 +57,26 @@ if __name__=='__main__':
                 vertex = model.reconstruct_vertex(ori_img, ori_params['params'], de_normalize=False)[:,:2][model.bfm.kpt_ind]
                 draw_landmarks(ori_img.copy(), vertex.copy(), f'debug/1_{folder_name}_{img_name}_{idx}.jpg')
 
-        fliplr_img, fliplr_pts = utils.fliplr_face_landmarks(original_img, original_pts, reverse=False)
-        # draw_landmarks(fliplr_img.copy(), fliplr_pts.copy(), f'intermediate.jpg')
+        # fliplr_img, fliplr_pts = utils.fliplr_face_landmarks(original_img, original_pts, reverse=False)
+        # # draw_landmarks(fliplr_img.copy(), fliplr_pts.copy(), f'intermediate.jpg')
 
-        expand_ratio = random.uniform(1,1.4)
-        horizontal = random.uniform(-30,30)
-        vertical = random.uniform(-20,20)
+        # expand_ratio = random.uniform(1,1.4)
+        # horizontal = random.uniform(-30,30)
+        # vertical = random.uniform(-20,20)
 
-        fliplr_output = model.generate_3ddfa_params_plus(fliplr_img, fliplr_pts, expand_ratio=expand_ratio, preprocess=True, horizontal=horizontal, vertical=vertical)
-        for idx in range(len(fliplr_output)):
-            fliplr_img = fliplr_output[idx][0]
-            fliplr_params = fliplr_output[idx][1]
+        # fliplr_output = model.generate_3ddfa_params_plus(fliplr_img, fliplr_pts, expand_ratio=expand_ratio, preprocess=True, horizontal=horizontal, vertical=vertical)
+        # for idx in range(len(fliplr_output)):
+        #     fliplr_img = fliplr_output[idx][0]
+        #     fliplr_params = fliplr_output[idx][1]
 
-            fliplr_img_out_path = os.path.join(f'300VW-3D_closed_eyes_3ddfa/{folder_name}', f'{img_name}_{idx}_fliplr.jpg')
-            fliplr_params_out_path = os.path.join(f'300VW-3D_closed_eyes_3ddfa/{folder_name}', f'{img_name}_{idx}_fliplr.mat')
-            cv2.imwrite(fliplr_img_out_path, fliplr_img)
-            sio.savemat(fliplr_params_out_path, fliplr_params)
+        #     fliplr_img_out_path = os.path.join(f'300VW-3D_closed_eyes_3ddfa/{folder_name}', f'{img_name}_{idx}_fliplr.jpg')
+        #     fliplr_params_out_path = os.path.join(f'300VW-3D_closed_eyes_3ddfa/{folder_name}', f'{img_name}_{idx}_fliplr.mat')
+        #     cv2.imwrite(fliplr_img_out_path, fliplr_img)
+        #     sio.savemat(fliplr_params_out_path, fliplr_params)
 
-            if debug:
-                vertex = model.reconstruct_vertex(fliplr_img, fliplr_params['params'], de_normalize=False)[:,:2][model.bfm.kpt_ind]
-                draw_landmarks(fliplr_img.copy(), vertex.copy(), f'debug/2_{folder_name}_{img_name}_{idx}_fliplr.jpg')
+        #     if debug:
+        #         vertex = model.reconstruct_vertex(fliplr_img, fliplr_params['params'], de_normalize=False)[:,:2][model.bfm.kpt_ind]
+        #         draw_landmarks(fliplr_img.copy(), vertex.copy(), f'debug/2_{folder_name}_{img_name}_{idx}_fliplr.jpg')
 
     # custom_item = ('300VW-3D_cropped_closed_eyes/203/0818.jpg', '300VW-3D_cropped_closed_eyes/203/0818.mat')
     # task(custom_item, True)
