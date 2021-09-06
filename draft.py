@@ -197,18 +197,18 @@ def flip(img, params):
     show_pts(flipped_img, re_pts)
 
 if __name__=='__main__':
-    # img = cv2.imread('examples/Data/image00050.jpg')
-    # pts = sio.loadmat('examples/Data/image00050.mat')['pt3d_68'].T[:,:2]
+    img = cv2.imread('examples/Data/image00050.jpg')
+    pts = sio.loadmat('examples/Data/image00050.mat')['pt3d_68'].T[:,:2]
 
-    img = cv2.imread('examples/Data/300WLP-std_134212_1_0.jpg')
-    pts = sio.loadmat('examples/Data/300WLP-std_134212_1_0.mat')['pt3d']
+    # img = cv2.imread('examples/Data/300WLP-std_134212_1_0.jpg')
+    # pts = sio.loadmat('examples/Data/300WLP-std_134212_1_0.mat')['pt3d']
     size = 450
 
     height, width = img.shape[:2]
     '''
     Generate params
     '''
-    n_img, info = fm.generate_3ddfa_params(img, pts, False, shape=(size,size), expand_ratio=1.)
+    # n_img, info = fm.generate_3ddfa_params(img, pts, False, shape=(size,size), expand_ratio=1.)
 
     '''
     Random crop
@@ -238,13 +238,40 @@ if __name__=='__main__':
     #     scale, 
     #     mesh.transform.angle2matrix([0, 0, 0]), 
     #     [0, 0, 0]) 
-    vertices = fm.reconstruct_vertex(n_img, info['params'], False)
-    vertices[:,1] = height - vertices[:,1] - 1
+    # vertices = fm.reconstruct_vertex(n_img, info['params'], False)
+    # vertices[:,1] = height - vertices[:,1] - 1
 
-    vertices = vertices - np.mean(vertices, 0)[np.newaxis, :]
-    # flip vertices along y-axis.
+    # vertices = vertices - np.mean(vertices, 0)[np.newaxis, :]
+    # # flip vertices along y-axis.
     
-    light_positions = np.array([[0,-200,300]])
-    light_intensities = np.array([[1,1,1]])
-    light_img, light_vertices = light_test(vertices, light_positions, light_intensities)
-    show_pts(light_img, light_vertices[fm.bfm.kpt_ind], 'BGR')
+    # light_positions = np.array([[0,-200,300]])
+    # light_intensities = np.array([[1,1,1]])
+    # light_img, light_vertices = light_test(vertices, light_positions, light_intensities)
+    # show_pts(light_img, light_vertices[fm.bfm.kpt_ind], 'BGR')
+
+    '''
+    Read params
+    '''
+    # img = cv2.imread('samples/0168_1.jpg')
+    # params = sio.loadmat('samples/0168_1.mat')['params'].reshape(-1,)
+
+    # re_pts = fm.reconstruct_vertex(img, params, False)[fm.bfm.kpt_ind]
+    # show_pts(img, re_pts)
+
+    '''
+    Rotate params
+    '''
+    magic = [75.41140417589962, -79.51944989389769, -72.06898665794476]
+    r_img, r_params = fm.augment_rotate(img, pts, [-60, -70, 0])
+    
+    re_pts = fm.reconstruct_vertex(r_img, r_params, False)[fm.bfm.kpt_ind]
+    show_pts(r_img, re_pts)
+
+    # img = cv2.imread('samples/300WLP-std_134212_1_12.jpg')
+    # pts = sio.loadmat('samples/300WLP-std_134212_1_12.mat')['pt3d']
+
+    # n_img, info = fm.generate_3ddfa_params(img, pts, False)
+    # re_pts = fm.reconstruct_vertex(n_img, info['params'], False)[fm.bfm.kpt_ind]
+    # show_pts(n_img, re_pts)
+
+
