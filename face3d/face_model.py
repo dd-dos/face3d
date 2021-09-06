@@ -313,7 +313,8 @@ class FaceModel:
                                 expand_ratio=1., 
                                 shape=(128,128), 
                                 yaw=0,
-                                pitch=0):
+                                pitch=0,
+                                ignore_high_pitch=True):
         cart = []
 
         if preprocess:
@@ -330,15 +331,16 @@ class FaceModel:
 
         angles = extra['angles']
 
-        if np.abs(angles[0]) > 25:
-            return
+        if ignore_high_pitch:
+            if np.abs(angles[0]) > 25:
+                return
 
-        if np.abs(angles[0]) > 10 and np.abs(angles[1]) > 10:
-            return cart
-        elif np.abs(angles[1]) > 10:
-            pitch = 0
-        elif np.abs(angles[0]) > 10:
-            yaw = 0
+            if np.abs(angles[0]) > 10 and np.abs(angles[1]) > 10:
+                return cart
+            elif np.abs(angles[1]) > 10:
+                pitch = 0
+            elif np.abs(angles[0]) > 10:
+                yaw = 0
 
         vertices = self.reconstruct_vertex(preprocessed_img, params, de_normalize=False)
         colors = _get_colors(preprocessed_img, vertices.astype(int))
