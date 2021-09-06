@@ -21,14 +21,14 @@ def task(img_path):
     pts_2d_path = '/'.join(token)
 
     try:
-        img = cv2.imread(img_path)
+        img = cv2.imread(pts_2d_path.replace('annot', 'image').replace('pts', 'jpg'))
         pts_3d = torchfile.load(pts_3d_path)
         pts_2d = utils.read_pts(pts_2d_path)
     except Exception as e:
         print(e)
         return
 
-    # img, pts_2d, pts_3d = utils.crop_multi_face_landmarks(img, pts_2d, pts_3d, expand_ratio=1.)
+    cropped_img, cropped_pts_2d, cropped_pts_3d = utils.crop_multi_face_landmarks(img, pts_2d, pts_3d, expand_ratio=2.)
     # img, pts_2d, pts_3d = utils.resize_face_landmarks(img, pts_2d, pts_3d, shape=(128,128))
     
     token = img_path.split('/')
@@ -36,8 +36,8 @@ def task(img_path):
     file_id = token[-1]
 
     out_path = f'300VW-3D_and_2D/{folder_id}/{file_id}'
-    cv2.imwrite(out_path, img)
-    sio.savemat(f'300VW-3D_and_2D/{folder_id}/{file_id}'.replace('jpg', 'mat'), {'pt3d': pts_3d, 'pt2d': pts_2d})
+    cv2.imwrite(out_path, cropped_img)
+    sio.savemat(f'300VW-3D_and_2D/{folder_id}/{file_id}'.replace('jpg', 'mat'), {'pt3d': cropped_pts_3d, 'pt2d': cropped_pts_2d})
 
 if __name__=='__main__':
     shutil.rmtree('300VW-3D_and_2D', ignore_errors=True)
