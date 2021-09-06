@@ -335,12 +335,12 @@ class FaceModel:
             if np.abs(angles[0]) > 25:
                 return
 
-        if np.abs(angles[0]) > 10 and np.abs(angles[1]) > 10:
-            return cart
-        elif np.abs(angles[1]) > 10:
-            pitch = 0
-        elif np.abs(angles[0]) > 10:
-            yaw = 0
+            if np.abs(angles[0]) > 10 and np.abs(angles[1]) > 10:
+                return cart
+            elif np.abs(angles[1]) > 10:
+                pitch = 0
+            elif np.abs(angles[0]) > 10:
+                yaw = 0
 
         vertices = self.reconstruct_vertex(preprocessed_img, params, de_normalize=False)
         colors = _get_colors(preprocessed_img, vertices.astype(int))

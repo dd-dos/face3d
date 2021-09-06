@@ -44,7 +44,7 @@ if __name__=='__main__':
 
         expand_ratio = 1.
         yaw = np.random.choice([random.uniform(-40, -20), random.uniform(-20,20), random.uniform(20,40)], p=[0.25, 0.5, 0.25])
-        pitch = np.random.choice([random.uniform(-70, -60), random.uniform(-60, 50)], p=[0.7,0.3])
+        pitch = np.random.choice([random.uniform(-70, -60), random.uniform(-60, 50)], p=[0.8,0.2])
 
         output = model.generate_3ddfa_params_plus(original_img, original_pts, expand_ratio=expand_ratio, preprocess=False, yaw=yaw, pitch=pitch, ignore_high_pitch=False)
         for idx in range(len(output)):
