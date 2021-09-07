@@ -34,8 +34,9 @@ def light_test(vertices, light_positions, light_intensities, h = 256, w = 256, c
 def squeeze_face(img, pts, pad_ratio=None, squeeze_type='v'):
     ### Squeeze image and landmarks ###
 
-    height, width = img.shape[:2] 
-    size = min(height, width)
+    # height, width = img.shape[:2]
+    box_left, box_top, box_right, box_bot = get_landmarks_wrapbox(pts)
+    size = min(box_right-box_left, box_bot-box_top)
 
     if pad_ratio is None:
         pad_ratio = random.uniform(0.45, 0.55)
@@ -197,11 +198,11 @@ def flip(img, params):
     show_pts(flipped_img, re_pts)
 
 if __name__=='__main__':
-    img = cv2.imread('examples/Data/image00050.jpg')
-    pts = sio.loadmat('examples/Data/image00050.mat')['pt3d_68'].T[:,:2]
+    # img = cv2.imread('examples/Data/image00050.jpg')
+    # pts = sio.loadmat('examples/Data/image00050.mat')['pt3d_68'].T[:,:2]
 
-    # img = cv2.imread('examples/Data/300WLP-std_134212_1_0.jpg')
-    # pts = sio.loadmat('examples/Data/300WLP-std_134212_1_0.mat')['pt3d']
+    img = cv2.imread('examples/Data/300WLP-std_134212_1_0.jpg')
+    pts = sio.loadmat('examples/Data/300WLP-std_134212_1_0.mat')['pt3d']
     size = 450
 
     height, width = img.shape[:2]
@@ -225,7 +226,7 @@ if __name__=='__main__':
     '''
     Squeeze face
     '''
-    # squeeze_face(img, pts, 0.1, 'h')
+    squeeze_face(img, pts, 0.3, 'h')
 
     '''
     Light
@@ -261,11 +262,11 @@ if __name__=='__main__':
     '''
     Rotate params
     '''
-    magic = [75.41140417589962, -79.51944989389769, -72.06898665794476]
-    r_img, r_params = fm.augment_rotate(img, pts, [-60, -70, 0])
+    # magic = [75.41140417589962, -79.51944989389769, -72.06898665794476]
+    # r_img, r_params = fm.augment_rotate(img, pts, [-60, -70, 0])
     
-    re_pts = fm.reconstruct_vertex(r_img, r_params, False)[fm.bfm.kpt_ind]
-    show_pts(r_img, re_pts)
+    # re_pts = fm.reconstruct_vertex(r_img, r_params, False)[fm.bfm.kpt_ind]
+    # show_pts(r_img, re_pts)
 
     # img = cv2.imread('samples/300WLP-std_134212_1_12.jpg')
     # pts = sio.loadmat('samples/300WLP-std_134212_1_12.mat')['pt3d']
