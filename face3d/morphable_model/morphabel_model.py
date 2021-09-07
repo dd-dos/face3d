@@ -51,15 +51,15 @@ class MorphabelModel(object):
         self.triangles = self.model['tri']
         self.full_triangles = np.vstack((self.model['tri'], self.model['tri_mouth']))
 
-        if compute_params_mean_std:
-            self.params_mean_101 = np.zeros((101,))
-            self.params_std_101 = np.ones((101,))
-        else:
+        if os.path.isfile(mean_std_path):
             meta_101 = sio.loadmat(mean_std_path)
             self.params_mean_101 = meta_101['mean'].astype(np.float32).reshape(-1,)
             params_std_101 = meta_101['std'].astype(np.float32).reshape(-1,)
             params_std_101[11] = 1.
             self.params_std_101 = params_std_101
+        else:
+            self.params_mean_101 = np.zeros((101,))
+            self.params_std_101 = np.ones((101,))
 
         self.keypoints = np.load(f'{cwd}/BFM/keypoints_sim.npy')
 
