@@ -34,11 +34,11 @@ if __name__=='__main__':
         original_img = cv2.imread(img_path)
         original_pts = sio.loadmat(pts_path)['pt3d']
 
-        img, params = model.generate_3ddfa_params(original_img, original_pts, False, expand_ratio=1.)
+        img, info = model.generate_3ddfa_params(original_img, original_pts, False, expand_ratio=1.)
         img_out_path = os.path.join('300WLP_3ddfa/300WLP_3ddfa-verified', f'{name}.jpg')
         params_out_path = os.path.join('300WLP_3ddfa/300WLP_3ddfa-verified', f'{name}.mat')
         cv2.imwrite(img_out_path, img)
-        sio.savemat(params_out_path, params)
+        sio.savemat(params_out_path, info)
 
         # fliplr_img, fliplr_pts = utils.fliplr_face_landmarks(original_img, original_pts, reverse=False)
         # expand_ratio = random.uniform(1., 1.4)

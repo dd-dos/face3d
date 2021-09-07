@@ -32,7 +32,7 @@ class MorphabelModel(object):
             'tri_mouth': [114, 3] (start from 1, as a supplement to mouth triangles). ~
             'kpt_ind': [68,] (start from 1). ~
     """
-    def __init__(self, model_path=bfm_path, model_type = 'BFM', compute_params_mean_std=False):
+    def __init__(self, model_path=bfm_path, model_type = 'BFM'):
         super( MorphabelModel, self).__init__()
         if model_type=='BFM':
             self.model = load.load_BFM(model_path)
@@ -51,15 +51,11 @@ class MorphabelModel(object):
         self.triangles = self.model['tri']
         self.full_triangles = np.vstack((self.model['tri'], self.model['tri_mouth']))
 
-        if os.path.isfile(mean_std_path):
-            meta_101 = sio.loadmat(mean_std_path)
-            self.params_mean_101 = meta_101['mean'].astype(np.float32).reshape(-1,)
-            params_std_101 = meta_101['std'].astype(np.float32).reshape(-1,)
-            params_std_101[11] = 1.
-            self.params_std_101 = params_std_101
-        else:
-            self.params_mean_101 = np.zeros((101,))
-            self.params_std_101 = np.ones((101,))
+        meta_101 = sio.loadmat(mean_std_path)
+        self.params_mean_101 = meta_101['mean'].astype(np.float32).reshape(-1,)
+        params_std_101 = meta_101['std'].astype(np.float32).reshape(-1,)
+        params_std_101[11] = 1.
+        self.params_std_101 = params_std_101
 
         self.keypoints = np.load(f'{cwd}/BFM/keypoints_sim.npy')
 
