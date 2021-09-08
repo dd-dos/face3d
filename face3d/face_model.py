@@ -368,7 +368,7 @@ class FaceModel:
         obj['vertices'] = vertices
         obj['colors'] = colors
         obj['scale'] = np.float32(1)
-        obj['angles'] = [pitch, yaw, 0]
+        obj['angles'] = [pitch, yaw, random.choice(-50,50)]
         obj['trans'] = [0,0,0]
 
         rotated_img, rotated_vertices = self._transform_test(obj, camera, h, w)
