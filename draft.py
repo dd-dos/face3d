@@ -253,20 +253,20 @@ if __name__=='__main__':
     '''
     Read params
     '''
-    # img = cv2.imread('samples/0168_1.jpg')
-    # params = sio.loadmat('samples/0168_1.mat')['params'].reshape(-1,)
+    img = cv2.imread('samples/300WLP-std_134212_1_0.jpg')
+    params = sio.loadmat('samples/300WLP-std_134212_1_0.mat')['params'].reshape(-1,)
 
-    # re_pts = fm.reconstruct_vertex(img, params, False)[fm.bfm.kpt_ind]
-    # show_pts(img, re_pts)
+    re_pts = fm.reconstruct_vertex(img, params, False)[fm.bfm.kpt_ind]
+    show_pts(img, re_pts)
 
     '''
     Rotate params
     '''
     # magic = [75.41140417589962, -79.51944989389769, -72.06898665794476]
-    r_img, r_params = fm.augment_rotate(img, pts, [40, 0, -40])
+    # r_img, r_params = fm.augment_rotate(img, pts, [40, -20, -30])
     
-    re_pts = fm.reconstruct_vertex(r_img, r_params, False)[fm.bfm.kpt_ind]
-    show_pts(r_img, re_pts)
+    # re_pts = fm.reconstruct_vertex(r_img, r_params, False)[fm.bfm.kpt_ind]
+    # show_pts(r_img, re_pts)
 
     # img = cv2.imread('samples/300WLP-std_134212_1_12.jpg')
     # pts = sio.loadmat('samples/300WLP-std_134212_1_12.mat')['pt3d']
