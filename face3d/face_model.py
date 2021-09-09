@@ -314,6 +314,7 @@ class FaceModel:
                                 shape=(128,128), 
                                 yaw=0,
                                 pitch=0,
+                                roll=0,
                                 ignore_high_pitch=True):
         cart = []
 
@@ -348,7 +349,6 @@ class FaceModel:
             yaw = -np.abs(yaw)
         else:
             yaw = np.abs(yaw)
-        
 
         vertices = self.reconstruct_vertex(preprocessed_img, params, de_normalize=False)
         colors = _get_colors(preprocessed_img, vertices.astype(int))
@@ -368,7 +368,7 @@ class FaceModel:
         obj['vertices'] = vertices
         obj['colors'] = colors
         obj['scale'] = np.float32(1)
-        obj['angles'] = [pitch, yaw, random.choice(-50,50)]
+        obj['angles'] = [pitch, yaw, roll]
         obj['trans'] = [0,0,0]
 
         rotated_img, rotated_vertices = self._transform_test(obj, camera, h, w)

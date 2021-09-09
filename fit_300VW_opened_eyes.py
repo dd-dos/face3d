@@ -2,7 +2,6 @@ import os
 import multiprocessing as mp
 from pathlib import Path
 
-from numba.core.serialize import custom_rebuild
 from numpy.random import rand
 from face3d.face_model import FaceModel
 import tqdm
@@ -44,7 +43,8 @@ if __name__=='__main__':
 
         expand_ratio = 1.
         yaw = np.random.choice([random.uniform(-40, -20), random.uniform(-20, 20), random.uniform(20, 40)], p=[0.3, 0.4, 0.3])
-        pitch = np.random.choice([random.uniform(-55, -50), random.uniform(-50, -40), random.uniform(-40, 40)], p=[0.2, 0.5, 0.3])
+        pitch = np.random.choice([random.uniform(-55, -50), random.uniform(-50, -40), random.uniform(-40, 30), random.uniform(30, 40)], p=[0.15, 0.35, 0.15, 0.35])
+        roll = 0.
 
         output = model.generate_3ddfa_params_plus(original_img, original_pts, expand_ratio=expand_ratio, preprocess=False, yaw=yaw, pitch=pitch, ignore_high_pitch=False)
         for idx in range(len(output)):
@@ -88,7 +88,7 @@ if __name__=='__main__':
     shutil.rmtree('debug', ignore_errors=True)
     os.makedirs('debug', exist_ok=True)
     for idx in tqdm.tqdm(range(len(bag)), total=len(bag)):
-        if idx % 1000 == 0:
+        if idx % 100 == 0:
             debug = True
             task(bag[idx], debug)
             debug = False
