@@ -65,8 +65,8 @@ class MorphabelModel(object):
                 params_std_101[11] = 1.
                 self.params_std_101 = params_std_101
             else:
-                self.params_mean_101 = np.zeros((101,))
-                self.params_std_101 = np.ones((101,))
+                self.params_mean_101 = np.zeros((-1,))
+                self.params_std_101 = np.ones((-1,))
 
         self.keypoints = np.load(f'{cwd}/BFM/keypoints_sim.npy')
 
