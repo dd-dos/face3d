@@ -35,7 +35,10 @@ class FaceModel:
         self.bfm = morphable_model.MorphabelModel(params_mean_std_path)
         self.n_shape = n_shape
         self.n_exp = n_exp
-        _,_, self.scale_mean,_,_ = self._parse_params(self.bfm.params_mean)
+        if self.bfm.params_mean is None:
+            self.scale_mean = 1e-5
+        else:
+            _,_, self.scale_mean,_,_ = self._parse_params(self.bfm.params_mean)
 
     def _get_params(self, img, pt):
         """
