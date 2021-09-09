@@ -35,7 +35,7 @@ class FaceModel:
         self.bfm = morphable_model.MorphabelModel(params_mean_std_path)
         self.n_shape = n_shape
         self.n_exp = n_exp
-        _,_, self.scale_mean,_,_ = self._parse_params(self.bfm.params_mean_101)
+        _,_, self.scale_mean,_,_ = self._parse_params(self.bfm.params_mean)
 
     def _get_params(self, img, pt):
         """
@@ -125,8 +125,8 @@ class FaceModel:
                            set this False.
         """
         if de_normalize:
-            params = params.reshape(101,)
-            params = params * self.bfm.params_std_101 + self.bfm.params_mean_101
+            params = params.reshape(-1,)
+            params = params * self.bfm.params_std + self.bfm.params_mean
 
         camera_matrix = params[:12].reshape(3, -1)
         scale, rotation_matrix, trans = mesh.transform.P2sRt(camera_matrix)
