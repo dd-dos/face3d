@@ -13,7 +13,7 @@ if __name__=='__main__':
     shutil.rmtree('AFLW2000_3ddfa', ignore_errors=True)
     os.makedirs('AFLW2000_3ddfa', exist_ok=True)
 
-    model = FaceModel()
+    model = FaceModel(n_shape=40, n_exp=20)
     img_list = list(Path('AFLW2000').glob('**/*.jpg'))
     bag = []
     print(f'Push item to bag: ')

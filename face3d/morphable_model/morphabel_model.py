@@ -51,7 +51,7 @@ class MorphabelModel(object):
         self.triangles = self.model['tri']
         self.full_triangles = np.vstack((self.model['tri'], self.model['tri_mouth']))
 
-        if params_mean_std_path is not None:
+        if params_mean_std_path != '':
             meta_101 = sio.loadmat(params_mean_std_path)
             self.params_mean_101 = meta_101['mean'].astype(np.float32).reshape(-1,)
             params_std_101 = meta_101['std'].astype(np.float32).reshape(-1,)
