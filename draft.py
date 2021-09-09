@@ -12,7 +12,7 @@ from utils import close_eyes_68_ver_1, close_eyes_68_ver_2, crop
 import numpy as np
 import random
 import time
-fm = FaceModel()
+fm = FaceModel(n_shape=40, n_exp=20)
 import numba
 
 def light_test(vertices, light_positions, light_intensities, h = 256, w = 256, colors=None, light=True):
@@ -66,7 +66,7 @@ def squeeze_face(img, pts, pad_ratio=None, squeeze_type='v'):
     show_pts(n_img, re_pts)
     return n_img, info
 
-@numba.njit()
+# @numba.njit()
 def random_crop_substep(img, roi_box, params, expand_ratio=None, target_size=128):
     camera_matrix = params[:12].reshape(3, -1)
 
@@ -119,14 +119,14 @@ def random_crop_substep(img, roi_box, params, expand_ratio=None, target_size=128
     '''
     0.125 is purely selected from visualization.
     '''
-    shift_value_x = int(box_width * 0.125 + shift_value)
-    shift_value_y = int(box_height * 0.125 + shift_value)
+    shift_value_x = int(shift_value)
+    shift_value_y = int(shift_value)
 
     shift_x = np.random.randint(-shift_value_x, shift_value_x)
     shift_y = np.random.randint(-shift_value_y, shift_value_y)
 
-    # shift_x = shift_value_x
-    # shift_y = shift_value_y
+    shift_x = 0
+    shift_y = -shift_value_y
 
     center_x = int(center[0] + crop_size) + shift_x
     center_y = int(center[1] + crop_size) + shift_y
@@ -207,6 +207,17 @@ if __name__=='__main__':
 
     height, width = img.shape[:2]
     '''
+    Close eyes
+    '''
+    pts[37] = pts[41]
+    pts[38] = pts[40]
+    pts[43] = pts[47]
+    pts[44] = pts[46]
+    n_img, info = fm.generate_3ddfa_params(img, pts, False, shape=(size,size), expand_ratio=1.)
+    re_pts = fm.reconstruct_vertex(n_img, info['params'], False)[fm.bfm.kpt_ind]
+    show_vertices(re_pts)
+
+    '''
     Generate params
     '''
     # n_img, info = fm.generate_3ddfa_params(img, pts, False, shape=(size,size), expand_ratio=1.)
@@ -214,7 +225,7 @@ if __name__=='__main__':
     '''
     Random crop
     '''
-    # n_img, n_params = random_crop(n_img, info['roi_box'], info['params'], expand_ratio=1.)
+    # n_img, n_params = random_crop(n_img, info['roi_box'], info['params'], expand_ratio=0.8)
     # re_pts = fm.reconstruct_vertex(n_img, n_params, False)[fm.bfm.kpt_ind]
     # show_pts(n_img, re_pts)
 
@@ -253,8 +264,8 @@ if __name__=='__main__':
     '''
     Read params
     '''
-    # img = cv2.imread('samples/0168_1.jpg')
-    # params = sio.loadmat('samples/0168_1.mat')['params'].reshape(-1,)
+    # img = cv2.imread('samples/300WLP-std_134212_1_0.jpg')
+    # params = sio.loadmat('samples/300WLP-std_134212_1_0.mat')['params'].reshape(-1,)
 
     # re_pts = fm.reconstruct_vertex(img, params, False)[fm.bfm.kpt_ind]
     # show_pts(img, re_pts)
@@ -263,10 +274,10 @@ if __name__=='__main__':
     Rotate params
     '''
     # magic = [75.41140417589962, -79.51944989389769, -72.06898665794476]
-    r_img, r_params = fm.augment_rotate(img, pts, [40, 0, -40])
+    # r_img, r_params = fm.augment_rotate(img, pts, [40, -20, -30])
     
-    re_pts = fm.reconstruct_vertex(r_img, r_params, False)[fm.bfm.kpt_ind]
-    show_pts(r_img, re_pts)
+    # re_pts = fm.reconstruct_vertex(r_img, r_params, False)[fm.bfm.kpt_ind]
+    # show_pts(r_img, re_pts)
 
     # img = cv2.imread('samples/300WLP-std_134212_1_12.jpg')
     # pts = sio.loadmat('samples/300WLP-std_134212_1_12.mat')['pt3d']
@@ -275,4 +286,17 @@ if __name__=='__main__':
     # re_pts = fm.reconstruct_vertex(n_img, info['params'], False)[fm.bfm.kpt_ind]
     # show_pts(n_img, re_pts)
 
+    '''
+    Clip params
+    '''
+    # img = cv2.imread('samples/0560_0.jpg')
+    # params = sio.loadmat('samples/0560_0.mat')['params']
+    # shp, exp, scale, angles, trans = fm._parse_params(params.reshape(-1,), False)
+    # clipped_shp = shp[:40]
+    # clipped_exp = exp[:20]
+    # clipped_shp_exp = np.concatenate((clipped_shp, clipped_exp), axis=0)
+    # import ipdb; ipdb.set_trace(context=10)
+    # clipped_params = fm.reconstruct_params(scale, mesh.transform.angle2matrix(angles),trans, clipped_shp_exp)
+    # re_pts = fm.reconstruct_vertex(img, clipped_params, False)[fm.bfm.kpt_ind]
+    # show_vertices(re_pts)
 

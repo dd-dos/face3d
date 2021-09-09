@@ -20,9 +20,11 @@ def _get_colors(img, img_vertices):
     return colors
 
 class FaceModel:
-    def __init__(self, 
+    def __init__(self,
+                params_mean_std_path='',
                 n_shape=60,
-                n_exp=29):
+                n_exp=29,
+                ):
         """
         Main class for processing face model.
 
@@ -30,7 +32,7 @@ class FaceModel:
             :n_shape: number of shape parameters.
             :n_exp: number of expression parameters.
         """
-        self.bfm = morphable_model.MorphabelModel()
+        self.bfm = morphable_model.MorphabelModel(params_mean_std_path)
         self.n_shape = n_shape
         self.n_exp = n_exp
         _,_, self.scale_mean,_,_ = self._parse_params(self.bfm.params_mean_101)

@@ -51,8 +51,8 @@ def show_vertices(vertices: np.ndarray, type='3D'):
         plt.scatter(_vertices[0],
                     _vertices[1],
                     marker='.')
-        plt.xlim(-300, 300)
-        plt.ylim(-300, 300)
+        # plt.xlim(-300, 300)
+        # plt.ylim(-300, 300)
         plt.xlabel("x")
         plt.ylabel("y")
         plt.grid()
