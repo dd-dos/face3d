@@ -11,7 +11,7 @@ from . import load
 import os
 cwd = os.path.dirname(os.path.abspath(__file__))
 bfm_path = f'{cwd}/BFM/Out/BFM.mat'
-mean_std_path = f'{cwd}/BFM/params_mean_std_12_pose_60_shp_29_exp.mat'
+mean_std_path = f'{cwd}/BFM/params_mean_std.mat'
 
 class MorphabelModel(object):
     """docstring for  MorphabelModel
@@ -52,21 +52,21 @@ class MorphabelModel(object):
         self.full_triangles = np.vstack((self.model['tri'], self.model['tri_mouth']))
 
         if params_mean_std_path != '':
-            meta_101 = sio.loadmat(params_mean_std_path)
-            self.params_mean_101 = meta_101['mean'].astype(np.float32).reshape(-1,)
-            params_std_101 = meta_101['std'].astype(np.float32).reshape(-1,)
-            params_std_101[11] = 1.
-            self.params_std_101 = params_std_101
+            meta = sio.loadmat(params_mean_std_path)
+            self.params_mean = meta['mean'].astype(np.float32).reshape(-1,)
+            params_std = meta['std'].astype(np.float32).reshape(-1,)
+            params_std[11] = 1.
+            self.params_std = params_std
         else:
             if os.path.isfile(mean_std_path):
-                meta_101 = sio.loadmat(mean_std_path)
-                self.params_mean_101 = meta_101['mean'].astype(np.float32).reshape(-1,)
-                params_std_101 = meta_101['std'].astype(np.float32).reshape(-1,)
-                params_std_101[11] = 1.
-                self.params_std_101 = params_std_101
+                meta = sio.loadmat(mean_std_path)
+                self.params_mean = meta['mean'].astype(np.float32).reshape(-1,)
+                params_std = meta['std'].astype(np.float32).reshape(-1,)
+                params_std[11] = 1.
+                self.params_std = params_std
             else:
-                self.params_mean_101 = np.zeros((-1,))
-                self.params_std_101 = np.ones((-1,))
+                self.params_mean = None
+                self.params_std = None
 
         self.keypoints = np.load(f'{cwd}/BFM/keypoints_sim.npy')
 
@@ -90,9 +90,9 @@ class MorphabelModel(object):
     
     def generate_params(self):
         random_params = np.random.normal(
-            loc=self.params_mean_101,
-            scale=self.params_std_101,
-            size=(101,)
+            loc=self.params_mean,
+            scale=self.params_std,
+            size=,)
         )
 
         return random_params
