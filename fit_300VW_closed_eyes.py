@@ -24,7 +24,7 @@ if __name__=='__main__':
             exist_ok=True
         )
 
-    model = FaceModel()
+    model = FaceModel(n_shape=40, n_exp=20)
     img_list = list(Path('GANnotation/300VW-3D_closed_eyes').glob('**/*.jpg'))
     bag = []
     print(f'Push item to bag: ')

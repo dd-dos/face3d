@@ -20,7 +20,7 @@ if __name__=='__main__':
     os.makedirs('300WLP_3ddfa', exist_ok=True)
     os.makedirs('300WLP_3ddfa/300WLP_3ddfa-verified', exist_ok=True)
 
-    model = FaceModel()
+    model = FaceModel(n_shape=40, n_exp=20)
     img_list = list(Path('300WLP').glob('**/*.jpg'))
     bag = []
     print(f'Push item to bag: ')
@@ -54,11 +54,12 @@ if __name__=='__main__':
         #     fliplr_img = cv2.circle(fliplr_img, pts,2,(0,255,0), -1, 8)
         # cv2.imwrite(f'test_flip_image.jpg', fliplr_img)
 
-        # foo_pts = model.reconstruct_vertex(img, params['params'], de_normalize=False)[:,:2][model.bfm.kpt_ind]
+        # foo_pts = model.reconstruct_vertex(img, info['params'], de_normalize=False)[:,:2][model.bfm.kpt_ind]
         # for pts in foo_pts:
         #     pts = pts.astype(int)
         #     img = cv2.circle(img, pts,2,(0,255,0), -1, 8)
         # cv2.imwrite(f'test_images.jpg', img)
+        # import ipdb; ipdb.set_trace(context=10)
         
         # import ipdb; ipdb.set_trace(context=10)
         # import ipdb; ipdb.set_trace(context=10)
