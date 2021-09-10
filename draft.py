@@ -14,6 +14,7 @@ import random
 import time
 fm = FaceModel(n_shape=40, n_exp=20)
 import numba
+from scipy import ndimage
 
 def light_test(vertices, light_positions, light_intensities, h = 256, w = 256, colors=None, light=True):
     if colors is None:
@@ -67,7 +68,7 @@ def squeeze_face(img, pts, pad_ratio=None, squeeze_type='v'):
     return n_img, info
 
 # @numba.njit()
-def random_crop_substep(img, roi_box, params, expand_ratio=None, target_size=128):
+def random_crop_substep(img, roi_box, params, expand_ratio=None, target_size=None, radius=None):
     camera_matrix = params[:12].reshape(3, -1)
 
     trans = camera_matrix[:, 3]
@@ -95,19 +96,17 @@ def random_crop_substep(img, roi_box, params, expand_ratio=None, target_size=128
     # that a landmark can reach when rotating.
     box_height = box_bot-box_top
     box_width = box_right-box_left
-    radius = max(box_height, box_width) / 2
+
+    if radius is None:
+        radius = max(box_height, box_width) / 2
 
     max_length = 2*np.sqrt(2)*radius
 
     # Crop a bit larger.
     if expand_ratio is None:
-        expand_ratio = random.uniform(1 / np.sqrt(2), 1.)
-    elif expand_ratio < 1 / np.sqrt(2):
-        '''
-        Expand ratio is a little too big, 
-        crop size will be negative and I don't wanna use more ops.")
-        '''
-        expand_ratio = 0.
+        expand_ratio = random.uniform(0.8, 1.1)
+    else:
+        expand_ratio = expand_ratio
 
     crop_size = int(max_length/2 * expand_ratio)
 
@@ -115,27 +114,35 @@ def random_crop_substep(img, roi_box, params, expand_ratio=None, target_size=128
     canvas = np.zeros((img_height+2*crop_size, img_width+2*crop_size, channel), dtype=np.uint8)
     canvas[crop_size:img_height+crop_size, crop_size:img_width+crop_size, :] = img
 
-    shift_value = crop_size - radius
+    # shift_value = int(max_length/2 * expand_ratio - radius)
     '''
     0.125 is purely selected from visualization.
     '''
-    shift_value_x = int(shift_value)
-    shift_value_y = int(shift_value)
+    # shift_value_x = int(box_width * 0.125 + shift_value)
+    # shift_value_y = int(box_height * 0.125 + shift_value)
+    # shift_value_x = shift_value
+    # shift_value_y = shift_value
 
-    shift_x = np.random.randint(-shift_value_x, shift_value_x)
-    shift_y = np.random.randint(-shift_value_y, shift_value_y)
+    # shift_x = random.randrange(-shift_value_x, shift_value_x)
+    # shift_y = random.randrange(-shift_value_y, shift_value_y)
 
-    shift_x = 0
-    shift_y = -shift_value_y
+    # shift_x = shift_value_x
+    # shift_y = shift_value_y
 
-    center_x = int(center[0] + crop_size) + shift_x
-    center_y = int(center[1] + crop_size) + shift_y
+    center_x = int(center[0] + crop_size)
+    center_y = int(center[1] + crop_size)
 
     # Top left bottom right.
     y1 = center_y-crop_size
     x1 = center_x-crop_size
     y2 = center_y+crop_size
     x2 = center_x+crop_size
+
+    n_box_left = box_left + crop_size - x1
+    n_box_right = box_right + crop_size - x1
+    n_box_top = box_top + crop_size - y1
+    n_box_bot = box_bot + crop_size - y1
+    n_roi_box = [n_box_left, n_box_top, n_box_right, n_box_bot]
 
     cropped_img = canvas[y1:y2, x1:x2]
 
@@ -145,21 +152,36 @@ def random_crop_substep(img, roi_box, params, expand_ratio=None, target_size=128
 
     cropped_trans = (flip_offset + np.array([-x1, -y1, 0])).reshape(3,) @ flip_matrix.T + norm_trans + trans
 
-    resized_scale = scale / (2*crop_size) * target_size
-    resized_trans = cropped_trans / (2*crop_size) * target_size
+    if target_size is None:
+        resized_scale = scale
+        resized_trans = cropped_trans
+    else:
+        resized_scale = scale / (2*crop_size) * target_size
+        resized_trans = cropped_trans / (2*crop_size) * target_size
 
     re_scaled_rot_matrix = resized_scale * rotation_matrix
     re_camera_matrix = np.concatenate((re_scaled_rot_matrix, resized_trans.reshape(-1,1)), axis=1)
     re_params = np.concatenate((re_camera_matrix.reshape(12,1), params[12:].reshape(-1,1)), axis=0)
 
-    return cropped_img, re_params
+    return cropped_img, re_params, n_roi_box
 
-def random_crop(img, roi_box, params, expand_ratio=1, target_size=128):
-    cropped_img, re_params = random_crop_substep(img, roi_box, params, expand_ratio, target_size)
-    re_img = cv2.resize(cropped_img, (target_size, target_size))
+def random_crop(img, roi_box, params, expand_ratio=None, target_size=None, radius=None):
+    '''
+    Random crop and resize image to target size.
+    '''
+    cropped_img, re_params, n_roi_box = random_crop_substep(img, roi_box, params, expand_ratio, target_size, radius)
 
-    return re_img, re_params
+    if target_size is None:
+        re_img = cropped_img
+        re_roi_box = np.array(n_roi_box)
+    else:
+        re_img = cv2.resize(cropped_img, (target_size, target_size))
+        re_roi_box = np.array(n_roi_box) / cropped_img.shape[0] * target_size
+    # re_pts = fm.reconstruct_vertex(re_img, re_params)[fm.bfm.kpt_ind][:,:2]
+    # draw_pts(re_img, re_pts)
+    # import ipdb; ipdb.set_trace(context=10)
 
+    return re_img, re_params, re_roi_box
 @numba.njit()
 def flip_substep(img, params):
     img_height, img_width = img.shape[:2]
@@ -197,6 +219,7 @@ def flip(img, params):
     re_pts = fm.reconstruct_vertex(flipped_img, flipped_params, False)[fm.bfm.kpt_ind]
     show_pts(flipped_img, re_pts)
 
+
 if __name__=='__main__':
     img = cv2.imread('examples/Data/image00050.jpg')
     pts = sio.loadmat('examples/Data/image00050.mat')['pt3d_68'].T[:,:2]
@@ -209,23 +232,26 @@ if __name__=='__main__':
     '''
     Close eyes
     '''
-    pts[37] = pts[41]
-    pts[38] = pts[40]
-    pts[43] = pts[47]
-    pts[44] = pts[46]
-    n_img, info = fm.generate_3ddfa_params(img, pts, False, shape=(size,size), expand_ratio=1.)
-    re_pts = fm.reconstruct_vertex(n_img, info['params'], False)[fm.bfm.kpt_ind]
-    show_vertices(re_pts)
+    # pts[37] = pts[41]
+    # pts[38] = pts[40]
+    # pts[43] = pts[47]
+    # pts[44] = pts[46]
+    # n_img, info = fm.generate_3ddfa_params(img, pts, False, shape=(size,size), expand_ratio=1.)
+    # re_pts = fm.reconstruct_vertex(n_img, info['params'], False)[fm.bfm.kpt_ind]
+    # show_vertices(re_pts)
 
     '''
     Generate params
     '''
-    # n_img, info = fm.generate_3ddfa_params(img, pts, False, shape=(size,size), expand_ratio=1.)
+    n_img, info = fm.generate_3ddfa_params(img, pts, False, shape=(size,size), expand_ratio=1.)
 
     '''
     Random crop
     '''
-    # n_img, n_params = random_crop(n_img, info['roi_box'], info['params'], expand_ratio=0.8)
+    for _ in range(10):
+        t0 = time.time()
+        n_img, n_params,_ = random_crop(n_img, info['roi_box'], info['params'], expand_ratio=10, radius=300, target_size=128)
+        print(time.time()-t0)
     # re_pts = fm.reconstruct_vertex(n_img, n_params, False)[fm.bfm.kpt_ind]
     # show_pts(n_img, re_pts)
 
