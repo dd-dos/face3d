@@ -16,10 +16,25 @@ fm = FaceModel(n_shape=40, n_exp=20)
 import numba
 from scipy import ndimage
 
-def light_test(vertices, light_positions, light_intensities, h = 256, w = 256, colors=None, light=True):
+# @numba.njit()
+def _get_colors_depth(img, img_vertices):
+    colors = np.zeros((len(img_vertices),3))
+
+    depths = img_vertices.T[-1]
+    depths = depths/np.max(depths)
+    for idx in range(len(img_vertices)):
+        value = depths[idx]
+        colors[idx] = np.array([value, value, value])
+
+    return colors
+
+def light_test(vertices, light_positions, light_intensities, h = 256, w = 256, colors=None, light=True, depth=False):
     if colors is None:
-        colors = fm.bfm.generate_colors(fm.bfm.get_tex_para())
-        colors = colors/np.max(colors)
+        if depth:
+            colors = _get_colors_depth()
+        else:
+            colors = fm.bfm.generate_colors(fm.bfm.get_tex_para())
+            colors = colors/np.max(colors)
 
     if light == True:   
         lit_colors = mesh.light.add_light(vertices, fm.bfm.triangles, colors, light_positions, light_intensities)
@@ -219,6 +234,44 @@ def flip(img, params):
     re_pts = fm.reconstruct_vertex(flipped_img, flipped_params, False)[fm.bfm.kpt_ind]
     show_pts(flipped_img, re_pts)
 
+def pointcloud_to_depth_map(pointcloud: np.ndarray, theta_res=150, phi_res=32, max_depth=50, phi_min_degrees=60,
+                            phi_max_degrees=100) -> np.ndarray:
+    """
+        All params are set so they match default carla lidar settings
+    """
+    assert pointcloud.shape[1] == 3, 'Must have (N, 3) shape'
+    assert len(pointcloud.shape) == 2, 'Must have (N, 3) shape'
+
+    xs = pointcloud[:, 0]
+    ys = pointcloud[:, 1]
+    zs = pointcloud[:, 2]
+
+    rs = np.sqrt(np.square(xs) + np.square(ys) + np.square(zs))
+
+    phi_min = np.deg2rad(phi_min_degrees)
+    phi_max = np.deg2rad(phi_max_degrees)
+    phi_range = phi_max - phi_min
+    phis = np.arccos(zs / rs)
+
+    THETA_MIN = -np.pi
+    THETA_MAX = np.pi
+    THETA_RANGE = THETA_MAX - THETA_MIN
+    thetas = np.arctan2(xs, ys)
+
+    phi_indices = ((phis - phi_min) / phi_range) * (phi_res - 1)
+    phi_indices = np.rint(phi_indices).astype(np.int16)
+
+    theta_indices = ((thetas - THETA_MIN) / THETA_RANGE) * theta_res
+    theta_indices = np.rint(theta_indices).astype(np.int16)
+    theta_indices[theta_indices == theta_res] = 0
+
+    normalized_r = rs / max_depth
+
+    canvas = np.ones(shape=(theta_res, phi_res), dtype=np.float32)
+    # We might need to filter out out-of-bound phi values, if min-max degrees doesnt match lidar settings
+    canvas[theta_indices, phi_indices] = normalized_r
+
+    return canvas
 
 if __name__=='__main__':
     img = cv2.imread('examples/Data/image00050.jpg')
@@ -248,10 +301,10 @@ if __name__=='__main__':
     '''
     Random crop
     '''
-    for _ in range(10):
-        t0 = time.time()
-        n_img, n_params,_ = random_crop(n_img, info['roi_box'], info['params'], expand_ratio=10, radius=300, target_size=128)
-        print(time.time()-t0)
+    # for _ in range(10):
+    #     t0 = time.time()
+    #     n_img, n_params,_ = random_crop(n_img, info['roi_box'], info['params'], expand_ratio=10, radius=300, target_size=128)
+    #     print(time.time()-t0)
     # re_pts = fm.reconstruct_vertex(n_img, n_params, False)[fm.bfm.kpt_ind]
     # show_pts(n_img, re_pts)
 
@@ -268,24 +321,26 @@ if __name__=='__main__':
     '''
     Light
     '''
-    # shp, exp, scale, angles, trans = fm._parse_params(info['params'], False)
-    # vertices = fm.bfm.reduced_generated_vertices(shp, exp)
-    # vertices = vertices - np.mean(vertices, 0)[np.newaxis, :]
-    # vertices = mesh.transform.similarity_transform(
-    #     vertices, 
-    #     scale, 
-    #     mesh.transform.angle2matrix([0, 0, 0]), 
-    #     [0, 0, 0]) 
-    # vertices = fm.reconstruct_vertex(n_img, info['params'], False)
-    # vertices[:,1] = height - vertices[:,1] - 1
+    shp, exp, scale, angles, trans = fm._parse_params(info['params'], False)
+    vertices = fm.bfm.reduced_generated_vertices(shp, exp)
+    vertices = vertices - np.mean(vertices, 0)[np.newaxis, :]
+    vertices = mesh.transform.similarity_transform(
+        vertices, 
+        scale, 
+        mesh.transform.angle2matrix([0, 0, 0]), 
+        [0, 0, 0]) 
+    vertices = fm.reconstruct_vertex(n_img, info['params'], False).astype(int)
+    colors = _get_colors_depth(n_img, vertices)
 
-    # vertices = vertices - np.mean(vertices, 0)[np.newaxis, :]
-    # # flip vertices along y-axis.
+    vertices[:,1] = height - vertices[:,1] - 1
+
+    vertices = vertices - np.mean(vertices, 0)[np.newaxis, :]
+    # flip vertices along y-axis.
     
-    # light_positions = np.array([[0,-200,300]])
-    # light_intensities = np.array([[1,1,1]])
-    # light_img, light_vertices = light_test(vertices, light_positions, light_intensities)
-    # show_pts(light_img, light_vertices[fm.bfm.kpt_ind], 'BGR')
+    light_positions = np.array([[0,-200,300]])
+    light_intensities = np.array([[1,1,1]])
+    light_img, light_vertices = light_test(vertices, light_positions, light_intensities, light=False, colors=colors, h=450, w=450)
+    show_ndarray_img(light_img)
 
     '''
     Read params
